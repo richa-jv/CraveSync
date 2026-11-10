@@ -2,23 +2,27 @@
   {
     "name": "Richa",
     "favorite_cuisines": [
-      "korean",
-      "japanese",
-      "indian",
       "dessert"
     ],
     "favorite_places": [
       "Jerusalem Shawarma"
     ],
-    "favorite_dishes": [],
+    "favorite_dishes": [
+      "ice cream",
+      "bubble tea",
+      "cake",
+      "donut",
+      "mochi",
+      "matcha"
+    ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
     "soft_avoid": [],
     "calorie_goal_per_meal": null,
     "budget": 20,
     "max_travel_min": 30,
-    "likes_text": "trying somewhere new, spicy food, good value for a student",
-    "notes": "PLACEHOLDER - Richa, edit this to your real preferences"
+    "likes_text": "eats anything, loves dessert and trying new places",
+    "notes": "Eats anything, and LOVES dessert."
   },
   {
     "name": "Harshi",

@@ -33,11 +33,8 @@
             <p class="eyebrow">FFO Match</p>
             <p id="hello" class="hello">Hey Richa 👋</p>
             <h1>No idea what to eat? <span class="accent">Let's pick together.</span></h1>
-            <label class="search">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              <input id="craving" type="search" placeholder="What are you craving today?" autocomplete="off" aria-label="What are you craving?" />
-              <button class="go" id="surprise-go" title="Surprise me" aria-label="Surprise me"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></button>
-            </label>
+            <p class="hero-label">What's the plan?</p>
+            <div id="plans" class="hero-chips" role="group" aria-label="What's the plan?"></div>
           </div>
 
           <div class="block">
@@ -49,8 +46,18 @@
           </div>
 
           <div class="block">
-            <h2>What's the plan?</h2>
-            <div id="plans" class="chips scroll"></div>
+            <div class="block-head">
+              <h2>Budget per person</h2>
+              <span id="budget-label" class="budget-label">Any price</span>
+            </div>
+            <div class="range-box">
+              <div class="range">
+                <div class="range-track"><i id="range-fill"></i></div>
+                <input type="range" id="bmin" min="0" max="100" step="0.5" value="0" aria-label="Minimum price per person" />
+                <input type="range" id="bmax" min="0" max="100" step="0.5" value="100" aria-label="Maximum price per person" />
+              </div>
+              <div class="range-ticks" id="range-ticks"></div>
+            </div>
           </div>
 
           <div class="block">

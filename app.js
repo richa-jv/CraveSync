@@ -3,8 +3,9 @@ import { toCSV } from "./lib/csv.js";
 
 const CAMPUS = [53.5263, -113.525];
 const PLAN_LABELS = {
-  any: "✨ Anything", coffee: "☕ Coffee", "quick snack": "🥨 Quick snack", lunch: "🥪 Lunch",
+  any: "✨ Anything", coffee: "☕ Coffee / matcha", "quick snack": "🥨 Quick snack", lunch: "🥪 Lunch",
   dinner: "🍝 Dinner", "late-night": "🌙 Late-night", "drive-thru": "🚗 Drive-thru",
+  dessert: "🍨 Dessert", "on campus": "🏫 On campus",
 };
 const MOODS = [
   { id: "comfort", label: "Comfort Food", icon: "🍲", craving: "comfort burger pasta fried chicken pizza mac and cheese" },
@@ -63,9 +64,10 @@ const state = {
   who: new Set(store.get("ffo.who", ["Richa"]).filter((n) => people[n])),
   plan: store.get("ffo.plan", "any"),
   mood: null,
-  craving: "",
   nearby: false,
   surprise: 0,
+  priceMin: 1,
+  priceMax: 500,
 };
 if (!state.who.size && peopleList.length) state.who.add(peopleList[0].name);
 let current = { recs: [], excluded: [] };
@@ -128,7 +130,7 @@ $("#pick-none").addEventListener("click", () => { state.who = new Set(["Richa"].
 
 function renderPlans() {
   $("#plans").innerHTML = ["any", ...OCCASIONS]
-    .map((o) => `<button class="chip plan" data-plan="${o}" aria-pressed="${state.plan === o}">${PLAN_LABELS[o] ?? o}</button>`).join("");
+    .map((o) => `<button class="hchip" data-plan="${o}" aria-pressed="${state.plan === o}">${PLAN_LABELS[o] ?? o}</button>`).join("");
 }
 $("#plans").addEventListener("click", (e) => {
   const plan = e.target.closest("[data-plan]")?.dataset.plan;
@@ -150,15 +152,36 @@ $("#moods").addEventListener("click", (e) => {
   update();
 });
 $("#clear-mood").addEventListener("click", () => { state.mood = null; update(); });
+
+// Budget slider: $1 to $500 on a curve, so $5-$30 (where most meals are) gets most of the room.
+const PRICE_MAX = 500;
+const toPrice = (t) => (t <= 0 ? 1 : Math.round(Math.pow(PRICE_MAX, t / 100)));
+const toPos = (price) => (100 * Math.log(Math.max(1, price))) / Math.log(PRICE_MAX);
+$("#range-ticks").innerHTML = [1, 10, 25, 75, 500].map((v) => `<span style="left:${toPos(v)}%">$${v}</span>`).join("");
+function renderBudget() {
+  const a = Number($("#bmin").value), b = Number($("#bmax").value);
+  $("#range-fill").style.left = `${a}%`;
+  $("#range-fill").style.width = `${b - a}%`;
+  const any = state.priceMin <= 1 && state.priceMax >= PRICE_MAX;
+  $("#budget-label").textContent = any ? "Any price" : `$${state.priceMin} – $${state.priceMax}${state.priceMax >= PRICE_MAX ? "+" : ""}`;
+}
+let budgetTimer;
+for (const id of ["#bmin", "#bmax"]) {
+  $(id).addEventListener("input", (e) => {
+    let a = Number($("#bmin").value), b = Number($("#bmax").value);
+    if (a > b - 2) { if (e.target.id === "bmin") { a = b - 2; $("#bmin").value = a; } else { b = a + 2; $("#bmax").value = b; } }
+    state.priceMin = toPrice(Math.max(0, a));
+    state.priceMax = toPrice(Math.min(100, b));
+    renderBudget();
+    clearTimeout(budgetTimer);
+    budgetTimer = setTimeout(update, 120);
+  });
+}
+renderBudget();
 $("#nearby").addEventListener("click", () => { state.nearby = !state.nearby; update(); });
 const surprise = (e) => { e?.preventDefault(); state.surprise = 1 + Math.floor(Math.random() * 1e6); update(); };
 $("#surprise").addEventListener("click", surprise);
-$("#surprise-go").addEventListener("click", surprise);
-let typing;
-$("#craving").addEventListener("input", (e) => {
-  clearTimeout(typing);
-  typing = setTimeout(() => { state.craving = e.target.value; state.surprise = 0; update(); }, 200);
-});
+
 
 // ---- results ---------------------------------------------------------------------------
 function compute() {
@@ -167,9 +190,10 @@ function compute() {
   const occasion = state.plan !== "any" ? state.plan : mood?.plan ?? "any";
   const filters = [];
   if (mood?.maxCost) filters.push((r) => r.avg_cost <= mood.maxCost);
+  if (state.priceMin > 1 || state.priceMax < 500) filters.push((r) => r.avg_cost >= state.priceMin && r.avg_cost <= state.priceMax);
   if (state.nearby) filters.push((r) => r.travel_min != null && r.travel_min <= 15 && r.how !== "drive");
   const where = filters.length ? (r) => filters.every((f) => f(r)) : null;
-  const craving = [state.craving, mood?.craving].filter(Boolean).join(" ");
+  const craving = mood?.craving ?? "";
   const res = recommend(group, restaurants, { occasion, craving, topN: state.surprise ? 12 : 8, where });
   if (state.surprise && res.recs.length > 1) {
     const i = state.surprise % res.recs.length;

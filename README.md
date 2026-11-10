@@ -6,7 +6,7 @@ It started with a real problem: me, my two roommates and our friends (9 people w
 
 ## What it does
 
-- **Solo or group picks.** Choose who's coming, what the plan is (coffee, quick snack, lunch, dinner, late-night cravings, drive-thru) and, optionally, what you're craving.
+- **Solo or group picks.** Choose who's coming, what the plan is (coffee/matcha, quick snack, lunch, dinner, late-night, drive-thru, dessert, on campus) and, optionally, a mood (comfort food, spicy, budget, light & healthy, warm & cozy, quick bites).
 - **Everywhere you can get to by train.** One script pulls every café, restaurant and fast-food spot from OpenStreetMap that's within a walk or one bus of campus, **or within a 15-minute walk or bus ride of any Capital Line or Metro Line LRT station** (Century Park to Clareview, plus MacEwan, Kingsway and NAIT). It works out which plans each place suits from its type and opening hours.
 - **Travel time, not kilometres.** Every place gets an estimated trip from campus and how to get there ("~23 min · LRT to Southgate + 4 min walk"), and each person has their own limit (`max_travel_min`, default 30).
 - **Drive-thrus across south and central Edmonton.** Drive-thrus come from a much bigger area (McKernan, Strathcona, South Campus, Southgate, downtown, up to Kingsway and Clareview), are labelled by neighbourhood, and aren't marked down for distance.

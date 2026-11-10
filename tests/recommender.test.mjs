@@ -142,3 +142,20 @@ test("stays fast with thousands of places", () => {
   const each = (performance.now() - t) / 3;
   assert.ok(each < 400, `took ${each.toFixed(0)} ms per search`);
 });
+
+test("dessert and on-campus plans are worked out from the data", () => {
+  const dessert = recommend([P.Star], R, { occasion: "dessert", topN: 20 }).recs.map((r) => r.restaurant.name);
+  assert.ok(dessert.includes("SAMPLE Matcha Cafe"));     // mochi + pastries
+  assert.ok(!dessert.includes("SAMPLE Pho Shop"));
+  const campus = recommend([P.Richa], R, { occasion: "on campus", topN: 20 }).recs.map((r) => r.restaurant.location);
+  assert.ok(campus.length && campus.every((l) => /^(On campus|SUB|HUB)$/.test(l)));
+});
+
+test("reasons read like a friend wrote them", () => {
+  const group = recommend([P.Harshi, P.Star, P.Richa], R, { occasion: "coffee", topN: 5 }).recs;
+  const all = group.flatMap((r) => r.reasons).join(" | ");
+  assert.match(all, /Loved by [A-Z][a-z]+(, [A-Z][a-z]+)*( & [A-Z][a-z]+)?/);
+  assert.ok(!/has \w+ for/.test(all), all);
+  const solo = recommend([P.Star], R, { occasion: "coffee", craving: "matcha", topN: 3 }).recs.flatMap((r) => r.reasons);
+  assert.ok(solo.includes("🍵 Your matcha fix"), solo.join(" | "));
+});
