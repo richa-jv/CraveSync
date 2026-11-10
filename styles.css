@@ -360,3 +360,37 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
   .row { grid-template-columns: 44px minmax(0, 1fr) auto; }
   .row .art { width: 44px; height: 44px; font-size: 22px; }
 }
+
+/* ---- Sidebar as colour-coded steps -------------------------------------------------------- */
+.sidebar { counter-reset: step; }
+.sidebar .group {
+  --tint: #fff3ea; --accent: var(--brand); --accent-ink: var(--brand-dark);
+  background: var(--tint); border: 0; border-radius: 16px; padding: 14px 14px 16px; margin-bottom: 10px;
+}
+.sidebar .group:nth-of-type(2) { --tint: #fff6dc; --accent: #d99a0b; --accent-ink: #8a5a00; }
+.sidebar .group:nth-of-type(3) { --tint: #e9f5ec; --accent: #2f9a5c; --accent-ink: #1f6b3f; }
+.sidebar .group:nth-of-type(4) { --tint: #eaf1fc; --accent: #3b74c9; --accent-ink: #24508f; }
+.sidebar .group:nth-of-type(5) { --tint: #f3ecfb; --accent: #8a5cc9; --accent-ink: #5d3a91; }
+.sidebar .group h2 { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin-bottom: 12px; }
+.sidebar .group h2::before {
+  counter-increment: step; content: counter(step);
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 12px; font-weight: 800;
+}
+.sidebar .group-head h2 { margin-bottom: 12px; }
+.sidebar .group .link { color: var(--accent-ink); }
+.sidebar .chip { background: rgba(255,255,255,.85); border-color: transparent; box-shadow: 0 1px 2px rgba(60,40,20,.06); }
+.sidebar .chip:hover { border-color: var(--accent); }
+.sidebar .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sidebar .chip[aria-pressed="true"] small { color: rgba(255,255,255,.8); }
+.sidebar .chip.more { background: transparent; border: 1px dashed var(--accent); color: var(--accent-ink); box-shadow: none; }
+.sidebar .avatar[aria-pressed="true"] .face { box-shadow: 0 0 0 2px var(--tint), 0 0 0 4px var(--accent); }
+.sidebar .toggle { color: var(--ink); }
+.sidebar .toggle[aria-pressed="true"] .box { background: var(--accent); border-color: var(--accent); }
+.sidebar #range-fill { background: var(--accent); }
+.sidebar .value { color: var(--accent-ink); font-weight: 700; }
+.sidebar .tiers { color: var(--accent-ink); opacity: .8; }
+#surprise { background: linear-gradient(135deg, var(--brand), #e0457b); color: #fff; border: 0; font-weight: 700; }
+#surprise:hover { filter: brightness(1.05); }
+.sidebar .group .link.muted { color: var(--muted); }
+.sidebar .toggles { display: grid; gap: 4px; }
