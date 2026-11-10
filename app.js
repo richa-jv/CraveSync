@@ -1,6 +1,8 @@
 import { OCCASIONS, prepareRestaurants, recommend, samePlace, nameList } from "./lib/recommender.js";
 import { parseCSV, toCSV } from "./lib/csv.js";
 import { CUISINES, matchesCuisine, extraCuisines } from "./lib/cuisines.js";
+import { createRatingsStore } from "./lib/cloud.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const CAMPUS = [53.5263, -113.525];
 const PLAN_LABELS = {
@@ -12,14 +14,16 @@ const PLAN_EMOJI = {
 };
 // Food tile for each card, matched to the place's name, dishes or cuisine (no photos of real restaurants).
 const ART = [
+  // Drinks and sweets first, so "Vietnamese coffee" is a coffee, not noodles.
+  [["bubble tea", "boba", "milk tea", "matcha"], "🧋"], [["smoothie", "juice"], "🥤"],
+  [["ice cream", "gelato", "dessert", "donut", "doughnut"], "🍩"], [["bakery", "croissant", "pastr"], "🥐"],
+  [["coffee", "cafe", "espresso", "london fog"], "☕"],
   [["sushi", "japanese", "poke", "hawaiian", "izakaya"], "🍣"], [["ramen", "noodle", "pho", "vietnamese", "udon"], "🍜"],
   [["korean"], "🥘"], [["dumpling", "momo"], "🥟"], [["chinese", "chow mein", "fried rice", "wok"], "🥡"], [["thai", "curry", "indian", "biryani", "dosa"], "🍛"],
   [["shawarma", "middle eastern", "arabic", "lebanese", "kebab", "donair", "mediterranean", "greek", "turkish", "falafel"], "🥙"],
   [["mexican", "taco", "burrito"], "🌮"], [["pizza"], "🍕"], [["italian", "pasta"], "🍝"],
   [["burger", "fast food", "american"], "🍔"], [["bbq", "barbecue", "steak"], "🥩"], [["subway", "sandwich", "sub", "wrap", "panini"], "🥪"],
-  [["smoothie", "juice"], "🥤"], [["bubble tea", "boba", "matcha", "tea"], "🧋"], [["ice cream", "gelato", "dessert", "donut", "doughnut"], "🍩"],
-  [["bakery", "croissant", "pastr"], "🥐"], [["brunch", "breakfast", "pancake"], "🥞"], [["coffee", "cafe", "espresso"], "☕"],
-  [["vegan", "bowls", "salad"], "🥗"], [["chicken", "wings"], "🍗"], [["seafood", "fish"], "🦐"],
+  [["brunch", "breakfast", "pancake"], "🥞"], [["vegan", "bowls", "salad"], "🥗"], [["chicken", "wings"], "🍗"], [["seafood", "fish"], "🦐"],
 ];
 const FACE_COLORS = ["#c8431d", "#7c5cbf", "#2f7d4f", "#b4517a", "#2d6aa8", "#a8741a", "#5b6b2f", "#8a4b3b", "#3d7f86", "#6b5b95"];
 
@@ -43,10 +47,13 @@ const ICON = {
 };
 
 // ---- data ----------------------------------------------------------------------------
-const [restaurants, peopleList, crewRatings] = await Promise.all([
+const cloud = createRatingsStore({ url: SUPABASE_URL, key: SUPABASE_ANON_KEY });
+let cloudOk = cloud.enabled; // false if not set up, or if the database couldn't be reached
+const [restaurants, peopleList, crewRatings, shared] = await Promise.all([
   fetch("data/restaurants.csv").then((r) => r.text()).then(prepareRestaurants),
   fetch("data/people.json").then((r) => r.json()),
   fetch("data/ratings.csv").then((r) => (r.ok ? r.text() : "")).then((t) => (t ? parseCSV(t) : [])).catch(() => []),
+  cloud.load().catch((e) => { console.warn("Shared ratings unavailable:", e); cloudOk = false; return []; }),
 ]);
 const people = Object.fromEntries(peopleList.map((p) => [p.name, p]));
 const faceColor = Object.fromEntries(peopleList.map((p, i) => [p.name, FACE_COLORS[i % FACE_COLORS.length]]));
@@ -248,9 +255,17 @@ function compute() {
   return { ...res, group };
 }
 
-// ---- crew ratings (data/ratings.csv + this browser's new ratings) ------------------------
+// ---- crew ratings (data/ratings.csv + shared database + this browser's unsaved ones) --------
+// One rating per person per place: later sources win, so a re-rating replaces the old one.
+const rateKey = (x) => `${x.person}|${x.restaurant}`.toLowerCase();
+function dedupe(rows) {
+  const m = new Map();
+  for (const x of rows) m.set(rateKey(x), { ...x, rating: Number(x.rating) });
+  return [...m.values()].filter((x) => x.rating >= 1);
+}
+const sharedRatings = () => dedupe([...crewRatings, ...[...shared].reverse()]);
 function allRatings() {
-  return [...crewRatings, ...ratings].map((x) => ({ ...x, rating: Number(x.rating) })).filter((x) => x.rating >= 1);
+  return dedupe([...sharedRatings(), ...ratings]);
 }
 function ratingFor(r) {
   const rows = allRatings().filter((x) => x.restaurant === r.name || samePlace(x.restaurant, r.name));
@@ -513,30 +528,71 @@ function renderStars() {
     .map((n) => `<button class="star ${n <= stars ? "on" : ""}" data-n="${n}" role="radio" aria-checked="${n === stars}" aria-label="${n} star${n > 1 ? "s" : ""}">★</button>`).join("");
 }
 $("#stars").addEventListener("click", (e) => { const n = e.target.closest(".star")?.dataset.n; if (n) { stars = Number(n); renderStars(); } });
-$("#save-rating").addEventListener("click", () => {
-  const place = $("#rate-place").value.trim();
-  const msg = $("#rate-msg");
-  if (!restaurants.some((r) => r.name === place)) { msg.textContent = "Pick a place from the list."; return; }
-  const entry = { person: $("#rate-person").value, restaurant: place, rating: stars, date: new Date().toISOString().slice(0, 10) };
+const keepLocal = (entry) => {
+  const i = ratings.findIndex((x) => rateKey(x) === rateKey(entry));
+  if (i >= 0) ratings.splice(i, 1);
   ratings.push(entry);
   store.set("ffo.ratings", ratings);
-  msg.textContent = `Saved. ${entry.person} gave ${place} ${stars}/5. ${stars >= 5 ? "Iconic." : stars <= 2 ? "Noted. Never again." : "Fair."}`;
+};
+const addShared = (rows) => {
+  for (const x of rows) {
+    const i = shared.findIndex((y) => rateKey(y) === rateKey(x));
+    if (i >= 0) shared.splice(i, 1);
+    shared.unshift(x);
+  }
+};
+// Ratings saved on this device while the database was unreachable get sent on the next visit.
+async function syncPending() {
+  if (!cloudOk || !ratings.length) return;
+  const pending = [...ratings];
+  try {
+    await cloud.save(pending);
+    addShared(pending);
+    ratings.length = 0;
+    store.set("ffo.ratings", ratings);
+    renderRatings();
+    update();
+  } catch (e) { console.warn("Couldn't sync saved ratings yet:", e); }
+}
+$("#save-rating").addEventListener("click", async () => {
+  const place = $("#rate-place").value.trim();
+  const msg = $("#rate-msg");
+  const btn = $("#save-rating");
+  if (!restaurants.some((r) => r.name === place)) { msg.textContent = "Pick a place from the list."; return; }
+  const entry = { person: $("#rate-person").value, restaurant: place, rating: stars, date: new Date().toISOString().slice(0, 10) };
+  const verdict = stars >= 5 ? "Iconic." : stars <= 2 ? "Noted. Never again." : "Fair.";
+  let where = "on this device";
+  if (cloudOk) {
+    btn.disabled = true;
+    msg.textContent = "Saving…";
+    try { await cloud.save(entry); addShared([entry]); where = "for the whole crew"; }
+    catch (e) { console.warn(e); keepLocal(entry); where = "on this device for now (couldn't reach the shared list, it'll sync next visit)"; }
+    btn.disabled = false;
+  } else keepLocal(entry);
+  msg.textContent = `Saved ${where}. ${entry.person} gave ${place} ${stars}/5. ${verdict}`;
   $("#rate-place").value = "";
   renderRatings();
   update();
 });
 function renderRatings() {
-  const fresh = [...ratings].reverse().map((r) => `<div class="rating-row"><span><b>${esc(r.person)}</b> · ${esc(r.restaurant)} <span class="muted small">new</span></span><span class="stars-txt">${"★".repeat(r.rating)}</span></div>`);
+  const tag = cloud.enabled ? "not synced yet" : "new";
+  const fresh = [...ratings].reverse().map((r) => `<div class="rating-row"><span><b>${esc(r.person)}</b> · ${esc(r.restaurant)} <span class="muted small">${tag}</span></span><span class="stars-txt">${"★".repeat(r.rating)}</span></div>`);
   const byPlace = new Map();
-  for (const x of crewRatings) byPlace.set(x.restaurant, [...(byPlace.get(x.restaurant) ?? []), x]);
+  for (const x of sharedRatings()) byPlace.set(x.restaurant, [...(byPlace.get(x.restaurant) ?? []), x]);
   const crew = [...byPlace].map(([place, rows]) => {
     const avg = rows.reduce((a, x) => a + Number(x.rating), 0) / rows.length;
     return `<div class="rating-row"><span><b>${esc(place)}</b> <span class="muted">· ${esc(shortList(rows.map((x) => x.person)))}</span></span><span class="stars-txt">★ ${avg.toFixed(1)}</span></div>`;
   });
   $("#ratings-list").innerHTML = fresh.length || crew.length ? [...fresh, ...crew].join("") : `<p class="muted small">No ratings yet.</p>`;
 }
+$("#ratings-note").textContent = cloudOk
+  ? "Ratings are shared with the whole crew. Download saves a backup of all of them."
+  : cloud.enabled
+    ? "Couldn't reach the shared ratings right now, so new ones are saved in this browser and sync next visit."
+    : "New ratings are saved in this browser. Download them and add the rows to data/ratings.csv.";
 $("#download").addEventListener("click", () => {
-  const blob = new Blob([toCSV(ratings, ["person", "restaurant", "rating", "date"])], { type: "text/csv" });
+  const rows = cloudOk ? allRatings() : ratings;
+  const blob = new Blob([toCSV(rows, ["person", "restaurant", "rating", "date"])], { type: "text/csv" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "ratings.csv" });
   a.click();
   URL.revokeObjectURL(a.href);
@@ -574,3 +630,4 @@ function update() {
 renderStars();
 renderRatings();
 update();
+syncPending();

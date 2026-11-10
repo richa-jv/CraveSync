@@ -68,12 +68,21 @@ Hand-entered rows (`source=manual`) and rows you've checked (`verified=yes`) are
 
 Every push to GitHub redeploys the site automatically, so updating `data/restaurants.csv` or `data/people.json` and pushing updates the live site.
 
-Ratings on the live site are saved in each visitor's browser. Use **Download ratings.csv**, add the rows to `data/ratings.csv`, and push. (A shared database is a later upgrade.)
+## Shared ratings (Supabase)
+
+Without setup, ratings are saved in each visitor's browser (use **Download CSV** and add the rows to `data/ratings.csv`). To share them across the whole crew:
+
+1. Create a free project at supabase.com.
+2. Open **SQL Editor → New query**, paste `supabase/schema.sql`, and click **Run**.
+3. Open **Project Settings → API** and copy the **Project URL** and the **anon public** key into `config.js`.
+4. Push to GitHub. Vercel redeploys and the Rate page now says "shared with the whole crew".
+
+The anon key is public by design. Row-level security only lets it read, add and update ratings (never delete), and the table checks reject bad values (rating 1–5, name lengths). Each person has one rating per place; rating again replaces it. If the database can't be reached, ratings are kept on the device and sent on the next visit.
 
 ## Tests and evaluation
 
 ```bash
-node --test tests/recommender.test.mjs   # recommender (uses fixed sample data)
+npm test                                 # recommender + shared-ratings client (no network)
 python -m pytest                         # map import
 node scripts/evaluate.mjs                # precision@5 vs. a cheapest-and-closest baseline
 ```
@@ -84,7 +93,8 @@ node scripts/evaluate.mjs                # precision@5 vs. a cheapest-and-closes
 |---|---|
 | `data/restaurants.csv` | Spots on and near campus: cuisines, dishes, proteins, cost, distance, which plans they suit, tags, coordinates. |
 | `data/people.json` | One profile per friend. `can_eat_proteins: null` means "eats anything"; `max_travel_min` is the longest trip they're happy with. |
-| `data/ratings.csv` | Real visit ratings. |
+| `data/ratings.csv` | Real visit ratings (also merged with the shared Supabase ratings when set up). |
+| `supabase/schema.sql` | Table and security rules for shared ratings. |
 | `tests/fixtures/` | Fixed sample data the tests run on, so tests don't change when the real list does. |
 
 ## Where it could go for FFO

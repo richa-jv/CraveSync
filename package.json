@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Personalised food picks for friend groups around the University of Alberta",
   "scripts": {
-    "test": "node --test tests/recommender.test.mjs",
+    "test": "node --test tests/recommender.test.mjs tests/cloud.test.mjs",
     "evaluate": "node scripts/evaluate.mjs"
   }
 }
