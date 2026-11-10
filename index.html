@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FFO Match</title>
+  <meta name="description" content="No idea what to eat? Personalised food picks for friend groups around the University of Alberta." />
+  <meta name="theme-color" content="#1F4D26" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍜</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">🍜</span> FFO Match</div>
+      <div class="top-right">
+        <button id="theme-btn" class="place-pill theme-btn" title="Switch look">🌿 Fresh</button>
+        <span class="place-pill hide-sm"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg> U of A · Edmonton</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <!-- HOME -->
+    <section id="home" class="view active" aria-label="Find a spot">
+      <div class="home-grid">
+        <div class="controls">
+          <div class="hero">
+            <p class="eyebrow">FFO Match</p>
+            <p id="hello" class="hello">Hey Richa 👋</p>
+            <h1>No idea what to eat? <span class="accent">Let's pick together.</span></h1>
+            <label class="search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="craving" type="search" placeholder="What are you craving today?" autocomplete="off" aria-label="What are you craving?" />
+              <button class="go" id="surprise-go" title="Surprise me" aria-label="Surprise me"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></button>
+            </label>
+          </div>
+
+          <div class="block">
+            <div class="block-head">
+              <h2>Who's eating?</h2>
+              <span><button class="text-btn" id="pick-all">Everyone</button><span class="dot-sep">·</span><button class="text-btn muted" id="pick-none">Just me</button></span>
+            </div>
+            <div id="people" class="avatars"></div>
+          </div>
+
+          <div class="block">
+            <h2>What's the plan?</h2>
+            <div id="plans" class="chips scroll"></div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">
+              <h2>In the mood for…</h2>
+              <button class="text-btn" id="clear-mood" hidden>Clear</button>
+            </div>
+            <div id="moods" class="moods"></div>
+          </div>
+
+          <div class="quick">
+            <button id="nearby" class="chip lime" aria-pressed="false">📍 Within 15 min</button>
+            <button id="surprise" class="chip">🎲 Surprise me</button>
+          </div>
+        </div>
+
+        <div class="results">
+          <div id="featured"></div>
+          <div class="block-head list-head">
+            <h2 id="more-title">More picks</h2>
+            <button class="text-btn" data-go="mapview">See on map →</button>
+          </div>
+          <div id="results" class="list"></div>
+          <details id="excluded" class="excluded" hidden><summary></summary><ul></ul></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAP -->
+    <section id="mapview" class="view" aria-label="Map">
+      <div class="view-head">
+        <h1 class="view-title">On the map</h1>
+        <p class="sub" id="map-sub"></p>
+      </div>
+      <div class="map-card"><div id="map" aria-label="Map of the picks"></div></div>
+      <p id="map-note" class="note"></p>
+      <div id="map-list" class="map-list"></div>
+    </section>
+
+    <!-- RATE -->
+    <section id="rate" class="view" aria-label="Rate a visit">
+      <div class="view-head">
+        <h1 class="view-title">How was it?</h1>
+        <p class="sub">Rate places you've been. Ratings are how we check the picks are actually good.</p>
+      </div>
+      <div class="card pad">
+        <div class="form-grid">
+          <label class="field"><span>Who are you?</span><select id="rate-person"></select></label>
+          <label class="field"><span>Where did you go?</span>
+            <input id="rate-place" list="places" placeholder="Start typing a place" autocomplete="off" />
+            <datalist id="places"></datalist>
+          </label>
+        </div>
+        <div class="field"><span>Your rating</span><div id="stars" class="stars" role="radiogroup" aria-label="Rating"></div></div>
+        <div class="row"><button id="save-rating" class="btn">Save rating</button><span id="rate-msg" class="muted small"></span></div>
+      </div>
+      <div class="card pad">
+        <div class="block-head">
+          <h2>Saved ratings</h2>
+          <span><button id="download" class="btn ghost small-btn">Download CSV</button><button id="clear-ratings" class="text-btn muted">Clear</button></span>
+        </div>
+        <p class="muted small">Saved in this browser. Download them and add the rows to <code>data/ratings.csv</code>.</p>
+        <div id="ratings-list" class="ratings"></div>
+      </div>
+    </section>
+
+    <!-- CREW -->
+    <section id="crew" class="view" aria-label="Our crew">
+      <div class="view-head">
+        <h1 class="view-title">Our crew</h1>
+        <p class="sub">Everyone's tastes, dealbreakers and limits. Picks always respect these.</p>
+      </div>
+      <div id="crew-grid" class="crew-grid"></div>
+    </section>
+
+    <footer class="foot">
+      Independent prototype inspired by X-Innovations' FFO | For Foodies Only. Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Travel times are estimates.
+    </footer>
+  </main>
+
+  <nav class="bottomnav" aria-label="Sections">
+    <button class="nav-btn active" data-go="home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg><span>Home</span></button>
+    <button class="nav-btn" data-go="mapview" aria-label="Map"><svg viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Map</span></button>
+    <button class="nav-btn" data-go="rate" aria-label="Rate"><svg viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9Z"/></svg><span>Rate</span></button>
+    <button class="nav-btn" data-go="crew" aria-label="Crew"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/></svg><span>Crew</span></button>
+  </nav>
+
+  <div id="sheet-backdrop" class="sheet-backdrop"></div>
+  <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Place details"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

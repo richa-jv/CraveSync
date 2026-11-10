@@ -1,0 +1,24 @@
+name,location,cuisines,dishes,proteins,avg_cost,distance_km,good_for,tags,description,verified,source
+Tim Hortons,On campus,cafe;canadian,coffee;muffin;donut;breakfast sandwich;wrap,boneless chicken;pork;vegetarian,6,0.2,coffee;quick snack,sugary;coffee,"Coffee, muffins and quick bites between classes",no,manual
+Subway,On campus,sandwiches,sub;wrap;salad,boneless chicken;beef;pork;fish;vegetarian,13,0.3,quick snack;lunch;dinner,light-options,"Build-your-own subs and salads, easy to keep it light",no,manual
+Bar Burrito (SUB),SUB,mexican,burrito;bowl;tacos;nachos,boneless chicken;beef;vegetarian,14,0.3,lunch;dinner,light-options,"Burritos and bowls built your way, fast and filling",no,manual
+Panda Express,On campus,chinese,orange chicken;chow mein;fried rice;beef broccoli,boneless chicken;beef;seafood;vegetarian,14,0.3,lunch;dinner,greasy;high-sodium;sugary,American-Chinese plates like orange chicken and chow mein,no,manual
+Ho Ho Chinese,On campus,chinese,fried rice;noodles;ginger beef;sweet and sour chicken,boneless chicken;beef;pork;seafood;vegetarian,14,0.4,lunch;dinner,greasy;high-sodium,Big portions of Chinese comfort food,no,manual
+Savoy (HUB),HUB,,,vegetarian,14,0.3,lunch,,"TODO: Richa, fill in what Savoy serves",no,manual
+Booster Juice,On campus,smoothies;cafe,smoothie;wrap;protein smoothie,boneless chicken;vegetarian,9,0.3,quick snack;lunch,light-options,"Smoothies, protein shakes and wraps",no,manual
+Starbucks,On campus,cafe,coffee;matcha latte;sandwich;protein box,boneless chicken;pork;vegetarian,10,0.3,coffee;quick snack,coffee;matcha;light-options,"Coffee, matcha lattes and grab-and-go sandwiches",no,manual
+McDonald's,Near campus,burgers;fast food,burger;mcnuggets;mcchicken;filet-o-fish;fries,boneless chicken;beef;pork;fish,12,1.0,quick snack;lunch;dinner;late-night,greasy;high-sodium,"Burgers, nuggets and fries, open late",no,manual
+A&W,Near campus,burgers;fast food,burger;chicken burger;onion rings;root beer,boneless chicken;beef;pork,13,1.0,quick snack;lunch;dinner,greasy;high-sodium,Burgers and chicken burgers,no,manual
+Wendy's,Near campus,burgers;fast food,burger;chicken sandwich;nuggets;chili;baked potato,boneless chicken;beef,12,1.2,quick snack;lunch;dinner;late-night,greasy;high-sodium,"Burgers, nuggets and chili, some lighter sides",no,manual
+SAMPLE Shawarma Spot,Whyte Ave,middle eastern;arabic;mediterranean,shawarma;shish tawouk;falafel;hummus;garlic potatoes,boneless chicken;beef;lamb;vegetarian,15,1.8,lunch;dinner;late-night,halal,"Chicken and beef shawarma, shish tawouk plates and falafel",no,manual
+SAMPLE Mediterranean Grill,Whyte Ave,mediterranean;greek,souvlaki;greek salad;pita;rice bowl,boneless chicken;lamb;fish;vegetarian,18,2.0,lunch;dinner,light-options,"Grilled souvlaki plates and salads, lighter option",no,manual
+SAMPLE Sushi Place,Whyte Ave,japanese;sushi,sushi;sashimi;chicken teriyaki;tempura,boneless chicken;fish;seafood;vegetarian,24,2.2,lunch;dinner,light-options,"Sushi rolls, teriyaki chicken and tempura",no,manual
+SAMPLE Ramen House,Whyte Ave,japanese;ramen,ramen;karaage;gyoza,boneless chicken;pork;seafood;vegetarian,19,2.0,lunch;dinner;late-night,high-sodium,"Rich ramen, fried karaage chicken and gyoza",no,manual
+SAMPLE Korean Fried Chicken,Whyte Ave,korean,boneless fried chicken;bibimbap;tteokbokki,boneless chicken;beef;vegetarian,20,2.1,dinner;late-night,greasy,"Boneless Korean fried chicken and bibimbap, good for sharing",no,manual
+SAMPLE Matcha Cafe,Whyte Ave,cafe;japanese;dessert,matcha latte;mochi;pastries,vegetarian,9,1.9,coffee;quick snack,matcha;sugary,"Matcha drinks, mochi and pastries, good study spot",no,manual
+SAMPLE Pasta Bar,Whyte Ave,italian,pasta;chicken alfredo;bolognese;caesar salad,boneless chicken;beef;pork;seafood;vegetarian,21,2.3,lunch;dinner,,"Fresh pasta, bolognese, chicken alfredo and seafood linguine",no,manual
+SAMPLE Pho Shop,Near campus,vietnamese,pho;banh mi;vermicelli bowl,boneless chicken;beef;pork;seafood;vegetarian,16,2.5,lunch;dinner,light-options;high-sodium,"Big bowls of pho and vermicelli, warming on cold days",no,manual
+SAMPLE Indian Kitchen,Near campus,indian,butter chicken;biryani;naan;samosa,boneless chicken;lamb;vegetarian,17,2.6,lunch;dinner,greasy,"Butter chicken, biryani and naan",no,manual
+SAMPLE Thai Kitchen,Whyte Ave,thai,pad thai;green curry;mango sticky rice,boneless chicken;beef;seafood;vegetarian,18,2.4,lunch;dinner,,"Pad thai and curries, adjustable spice",no,manual
+SAMPLE BBQ Smokehouse,Whyte Ave,bbq;american,brisket;pulled pork;ribs;mac and cheese,boneless chicken;beef;pork,27,3.5,dinner,greasy;pork-heavy;high-sodium,"Brisket, ribs and pulled pork, big group spot",no,manual
+SAMPLE Poke Bowl,Near campus,hawaiian;japanese,poke bowl;salmon bowl;tuna bowl,boneless chicken;fish;seafood;vegetarian,17,1.5,lunch,light-options,"Build-your-own poke bowls, fresh and light",no,manual
