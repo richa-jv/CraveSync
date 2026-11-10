@@ -575,15 +575,18 @@ $("#save-rating").addEventListener("click", async () => {
   update();
 });
 function renderRatings() {
+  // One row per place: everyone's ratings averaged, with this device's unsaved ones folded in and tagged.
   const tag = cloud.enabled ? "not synced yet" : "new";
-  const fresh = [...ratings].reverse().map((r) => `<div class="rating-row"><span><b>${esc(r.person)}</b> · ${esc(r.restaurant)} <span class="muted small">${tag}</span></span><span class="stars-txt">${"★".repeat(r.rating)}</span></div>`);
+  const pending = new Set(ratings.map(rateKey));
   const byPlace = new Map();
-  for (const x of sharedRatings()) byPlace.set(x.restaurant, [...(byPlace.get(x.restaurant) ?? []), x]);
-  const crew = [...byPlace].map(([place, rows]) => {
-    const avg = rows.reduce((a, x) => a + Number(x.rating), 0) / rows.length;
-    return `<div class="rating-row"><span><b>${esc(place)}</b> <span class="muted">· ${esc(shortList(rows.map((x) => x.person)))}</span></span><span class="stars-txt">★ ${avg.toFixed(1)}</span></div>`;
+  for (const x of [...ratings].reverse()) byPlace.set(x.restaurant, []); // new ones go first
+  for (const x of allRatings()) byPlace.set(x.restaurant, [...(byPlace.get(x.restaurant) ?? []), x]);
+  const rows = [...byPlace].filter(([, rs]) => rs.length).map(([place, rs]) => {
+    const avg = rs.reduce((a, x) => a + x.rating, 0) / rs.length;
+    const isNew = rs.some((x) => pending.has(rateKey(x)));
+    return `<div class="rating-row"><span><b>${esc(place)}</b> <span class="muted">· ${esc(shortList(rs.map((x) => x.person)))}</span>${isNew ? ` <span class="muted small">${tag}</span>` : ""}</span><span class="stars-txt">★ ${avg.toFixed(1)}</span></div>`;
   });
-  $("#ratings-list").innerHTML = fresh.length || crew.length ? [...fresh, ...crew].join("") : `<p class="muted small">No ratings yet.</p>`;
+  $("#ratings-list").innerHTML = rows.length ? rows.join("") : `<p class="muted small">No ratings yet.</p>`;
 }
 $("#ratings-note").textContent = cloudOk
   ? "Ratings are shared with the whole crew. Download saves a backup of all of them."
