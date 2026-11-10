@@ -286,7 +286,13 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--fores
 /* ---------- larger screens ---------- */
 @media (min-width: 960px) {
   .home-grid { grid-template-columns: 430px minmax(0, 1fr); gap: 40px; align-items: start; }
-  .controls { position: sticky; top: 74px; }
+  /* The left panel stays in view but scrolls on its own, so nothing gets stuck below the fold. */
+  .controls {
+    position: sticky; top: 74px; max-height: calc(100vh - 84px); overflow-y: auto; overscroll-behavior: contain;
+    padding: 2px 10px 110px 2px; margin-left: -2px; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+  }
+  .controls::-webkit-scrollbar { width: 8px; }
+  .controls::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
   .chips.scroll { flex-wrap: wrap; margin: 0; padding: 0; }
   .avatars { flex-wrap: wrap; overflow: visible; }
   .featured { display: grid; grid-template-columns: 250px minmax(0, 1fr); }

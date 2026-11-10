@@ -82,6 +82,8 @@ function artFor(r) {
   return { emoji, tone: h % 6 };
 }
 const price = (c) => (c <= 10 ? "$" : c <= 18 ? "$$" : "$$$");
+// Do we know where it is? (Hand-added places without a location yet say "Location TBC" once, not twice.)
+const known = (r) => !(r.distance_km == null && r.travel_min == null);
 function tripText(r) {
   if (r.distance_km == null && r.travel_min == null) return "location TBC";
   if (state.plan === "drive-thru" || r.how === "drive" || r.travel_min == null) return `${r.distance_km} km away`;
@@ -285,7 +287,7 @@ function featuredCard(rec, groupSize) {
   <button class="featured" data-open="0">
     <div class="art tone-${a.tone}"><span>${a.emoji}</span><span class="pick-label">${label}</span><span class="match">${Math.round(rec.score * 100)}% match</span></div>
     <div class="body">
-      <div class="meta"><span class="pill">${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b><span>${ICON.clock.replace("<svg", '<svg style="width:14px;height:14px;vertical-align:-2px"')} ${tripText(r)}</span></div>
+      <div class="meta"><span class="pill">${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b>${known(r) ? `<span>${ICON.clock.replace("<svg", '<svg style="width:14px;height:14px;vertical-align:-2px"')} ${tripText(r)}</span>` : ""}</div>
       <h3>${esc(r.name)}${r.verified === "yes" ? "" : `<span class="badge">unverified</span>`}</h3>
       <p class="muted small" style="margin:2px 0 12px">${esc(howText(r))}</p>
       <ul class="reasons">${(withRating(rec).length ? withRating(rec) : [r.description]).slice(0, 4).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
@@ -302,7 +304,7 @@ function pickCard(rec, i) {
     <div class="art tone-${a.tone}">${a.emoji}<span class="num">${i + 1}</span></div>
     <div>
       <div class="pick-top"><h3>${esc(r.name)}</h3><span class="match">${Math.round(rec.score * 100)}%</span></div>
-      <div class="meta"><span>${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b><span>${tripText(r)}</span></div>
+      <div class="meta"><span>${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b>${known(r) ? `<span>${tripText(r)}</span>` : ""}</div>
       <ul class="reasons">${(withRating(rec).length ? withRating(rec) : [r.cuisines.join(", ") || "food spot"]).slice(0, 2).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
       ${(() => { const w = [ratingWarning(r), r.heads_up].filter(Boolean)[0]; return w ? `<div class="warn">Heads up: ${esc(w)}</div>` : ""; })()}
     </div>
@@ -397,7 +399,7 @@ function openSheet(i) {
       </div>
       <div class="band"><span class="ic">${ICON.clock}</span><div><b>${r.opening_hours ? "Opening hours" : "Hours not listed"}</b><span>${esc(r.opening_hours || "Check before you go")}</span></div></div>
       <div class="grid2">
-        <div class="tile"><div class="k">Getting there</div><div class="v">${tripText(r)}</div></div>
+        <div class="tile"><div class="k">Getting there</div><div class="v">${known(r) ? tripText(r) : "Not known yet"}</div></div>
         <div class="tile"><div class="k">Price per person</div><div class="v">~$${Math.round(r.avg_cost)}${r.verified === "yes" ? "" : " (est.)"}</div></div>
       </div>
       ${(() => { const rt = ratingFor(r); return rt ? `<div class="tile" style="margin-top:10px"><div class="k">Crew rating</div><div class="v">${starText(rt.avg)} from ${nameList([...new Set(rt.rows.map((x) => x.person))])}</div></div>` : ""; })()}
@@ -447,7 +449,7 @@ function renderMap() {
   $("#map-note").textContent = missing ? `${missing} pick${missing > 1 ? "s aren't" : " isn't"} on the map yet (no coordinates). Run the map import or add lat/lon in restaurants.csv.` : "";
   $("#map-list").innerHTML = recs.map((rec, i) => `
     <button class="map-row" data-open="${i}"><span class="num">${i + 1}</span>
-      <span><span class="t">${esc(rec.restaurant.name)}</span><br><span class="s">${esc(rec.restaurant.location || "Near campus")} · ${tripText(rec.restaurant)}</span></span>
+      <span><span class="t">${esc(rec.restaurant.name)}</span><br><span class="s">${esc(rec.restaurant.location || (known(rec.restaurant) ? "Near campus" : "Location TBC"))}${known(rec.restaurant) ? ` · ${tripText(rec.restaurant)}` : ""}</span></span>
       <span class="match">${Math.round(rec.score * 100)}%</span></button>`).join("");
   if (!map) return;
   layer.clearLayers();
