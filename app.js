@@ -1,5 +1,6 @@
 import { OCCASIONS, prepareRestaurants, recommend, samePlace, nameList } from "./lib/recommender.js";
 import { parseCSV, toCSV } from "./lib/csv.js";
+import { CUISINES, matchesCuisine, extraCuisines } from "./lib/cuisines.js";
 
 const CAMPUS = [53.5263, -113.525];
 const PLAN_LABELS = {
@@ -7,14 +8,6 @@ const PLAN_LABELS = {
   dinner: "🍝 Dinner", "late-night": "🌙 Late-night", "drive-thru": "🚗 Drive-thru",
   dessert: "🍨 Dessert", "on campus": "🏫 On campus",
 };
-const MOODS = [
-  { id: "comfort", label: "Comfort Food", icon: "🍲", craving: "comfort burger pasta fried chicken pizza mac and cheese" },
-  { id: "spicy", label: "Spicy Craving", icon: "🌶️", craving: "spicy curry hot korean thai szechuan" },
-  { id: "budget", label: "Budget Meal", icon: "🪙", maxCost: 13 },
-  { id: "light", label: "Light & Healthy", icon: "🥗", craving: "salad poke bowl light fresh healthy smoothie" },
-  { id: "cozy", label: "Warm & Cozy", icon: "🍜", craving: "soup ramen pho curry noodles warm cozy" },
-  { id: "quick", label: "Quick Bites", icon: "⚡", plan: "quick snack" },
-];
 // Cuisine -> emoji for the card art (no photos of real restaurants).
 const ART = [
   [["sushi", "japanese", "poke", "hawaiian"], "🍣"], [["ramen", "noodles", "pho", "vietnamese"], "🍜"],
@@ -64,13 +57,18 @@ const initials = (n) => n.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toU
 const state = {
   who: new Set(store.get("ffo.who", ["Riri"]).filter((n) => people[n])),
   plan: store.get("ffo.plan", "any"),
-  mood: null,
+  cuisines: new Set(), // "What are you craving?" picks (any of them)
+  showAllCuisines: false,
   nearby: false,
   hangout: false,
   surprise: 0,
   priceMin: 1,
   priceMax: 500,
+  shown: 50, // up to 50 picks on screen at first; "Show more" adds 25
 };
+const FIRST_PAGE = 50;
+const PAGE = 25;
+let lastQuery = "";
 if (!state.who.size && peopleList.length) state.who.add(peopleList[0].name);
 let current = { recs: [], excluded: [] };
 
@@ -141,21 +139,32 @@ $("#plans").addEventListener("click", (e) => {
   if (plan) { state.plan = plan; state.surprise = 0; update(); }
 });
 
-function renderMoods() {
-  $("#moods").innerHTML = MOODS.map((m, i) => `
-    <button class="mood tone-${i}" data-mood="${m.id}" aria-pressed="${state.mood === m.id}">
-      <span class="ic">${m.icon}</span><span class="lb">${m.label}</span>
-    </button>`).join("");
-  $("#clear-mood").hidden = !state.mood;
+// ---- cuisine picker -----------------------------------------------------------------
+const ALL_CUISINES = [...CUISINES, ...extraCuisines(restaurants)];
+const cuisineById = Object.fromEntries(ALL_CUISINES.map((c) => [c.id, c]));
+function renderCuisines() {
+  const occasion = state.plan;
+  const inPlan = restaurants.filter((r) => occasion === "any" || r.good_for.includes(occasion));
+  const chips = (list) => list
+    .map((c) => ({ c, n: inPlan.filter((r) => matchesCuisine(r, c)).length }))
+    .filter(({ c, n }) => n > 0 || state.cuisines.has(c.id))
+    .map(({ c, n }) => `<button class="cchip" data-cuisine="${esc(c.id)}" aria-pressed="${state.cuisines.has(c.id)}">${c.emoji} ${esc(c.label)} <small>${n}</small></button>`)
+    .join("");
+  const extras = ALL_CUISINES.slice(CUISINES.length);
+  const extraHtml = chips(extras.filter((c) => state.showAllCuisines || state.cuisines.has(c.id)));
+  $("#cuisines").innerHTML = chips(CUISINES) + extraHtml +
+    (extras.length ? `<button class="cchip more" id="more-cuisines">${state.showAllCuisines ? "Fewer" : `More (${extras.length})`}</button>` : "");
+  $("#clear-cuisines").hidden = !state.cuisines.size;
 }
-$("#moods").addEventListener("click", (e) => {
-  const id = e.target.closest("[data-mood]")?.dataset.mood;
+$("#cuisines").addEventListener("click", (e) => {
+  if (e.target.closest("#more-cuisines")) { state.showAllCuisines = !state.showAllCuisines; renderCuisines(); return; }
+  const id = e.target.closest("[data-cuisine]")?.dataset.cuisine;
   if (!id) return;
-  state.mood = state.mood === id ? null : id;
+  state.cuisines.has(id) ? state.cuisines.delete(id) : state.cuisines.add(id);
   state.surprise = 0;
   update();
 });
-$("#clear-mood").addEventListener("click", () => { state.mood = null; update(); });
+$("#clear-cuisines").addEventListener("click", () => { state.cuisines.clear(); update(); });
 
 // Budget slider: $1 to $500 on a curve, so $5-$30 (where most meals are) gets most of the room.
 const PRICE_MAX = 500;
@@ -191,23 +200,24 @@ $("#surprise").addEventListener("click", surprise);
 // ---- results ---------------------------------------------------------------------------
 function compute() {
   const group = [...state.who].map((n) => people[n]);
-  const mood = MOODS.find((m) => m.id === state.mood);
-  const occasion = state.plan !== "any" ? state.plan : mood?.plan ?? "any";
+  const occasion = state.plan;
+  const picked = [...state.cuisines].map((id) => cuisineById[id]).filter(Boolean);
   const filters = [];
-  if (mood?.maxCost) filters.push((r) => r.avg_cost <= mood.maxCost);
+  if (picked.length) filters.push((r) => picked.some((c) => matchesCuisine(r, c)));
   if (state.priceMin > 1 || state.priceMax < 500) filters.push((r) => r.avg_cost >= state.priceMin && r.avg_cost <= state.priceMax);
   if (state.hangout) filters.push((r) => r.perks.length > 0);
   if (state.nearby) filters.push((r) => r.travel_min != null && r.travel_min <= 15 && r.how !== "drive");
   const where = filters.length ? (r) => filters.every((f) => f(r)) : null;
-  const craving = mood?.craving ?? "";
-  const res = recommend(group, restaurants, { occasion, craving, topN: state.surprise ? 12 : 8, where, ratings: allRatings() });
+  const craving = picked.map((c) => [c.label, ...c.words].join(" ")).join(" ");
+  // Rank every match; the page shows the first 50, then more on request.
+  const res = recommend(group, restaurants, { occasion, craving, topN: Infinity, where, ratings: allRatings() });
   // How many places exist for this plan at all, before anyone's food rules are applied.
   res.available = restaurants.filter((r) => (occasion === "any" || r.good_for.includes(occasion)) && (!where || where(r))).length;
   res.occasion = occasion;
   if (state.surprise && res.recs.length > 1) {
-    const i = state.surprise % res.recs.length;
+    const i = state.surprise % Math.min(12, res.recs.length); // surprise from the top 12
     const [pick] = res.recs.splice(i, 1);
-    res.recs = [pick, ...res.recs].slice(0, 8);
+    res.recs = [pick, ...res.recs];
   }
   return { ...res, group };
 }
@@ -302,15 +312,19 @@ function pickCard(rec, i) {
 function renderResults() {
   current = compute();
   const { recs, excluded, group } = current;
+  // New search (different people/plan/filters) -> start again from the top 50.
+  const query = JSON.stringify([[...state.who].sort(), state.plan, [...state.cuisines].sort(), state.nearby, state.hangout, state.priceMin, state.priceMax, state.surprise]);
+  if (query !== lastQuery) { state.shown = FIRST_PAGE; lastQuery = query; }
+  renderFilterNote();
   if (!group.length) {
     $("#featured").innerHTML = `<div class="empty"><span class="big">👋</span>Pick who's eating to get started.</div>`;
     $("#results").innerHTML = "";
   } else if (!recs.length && !current.available) {
     // The list has no places for this plan (or filters) at all - not a food-rules problem.
     const plan = PLAN_LABELS[current.occasion]?.replace(/^\S+\s/, "").toLowerCase() ?? "matching";
-    const filtered = state.priceMin > 1 || state.priceMax < 500 || state.nearby || state.hangout || state.mood;
+    const filtered = state.priceMin > 1 || state.priceMax < 500 || state.nearby || state.hangout || state.cuisines.size;
     $("#featured").innerHTML = filtered
-      ? `<div class="empty"><span class="big">🔍</span>No ${esc(plan)} spots match your budget, mood or distance filters.<br>Try widening them.</div>`
+      ? `<div class="empty"><span class="big">🔍</span>No ${esc(plan)} spots match your budget, cuisine or distance filters.<br>Try widening them.</div>`
       : `<div class="empty"><span class="big">🗺️</span>Your restaurant list doesn't have any <b>${esc(plan)}</b> spots yet.<br>Run <code>python scripts/fetch_places.py</code> to pull in real places from the map.</div>`;
     $("#results").innerHTML = "";
   } else if (!recs.length) {
@@ -319,9 +333,13 @@ function renderResults() {
     $("#results").innerHTML = "";
   } else {
     $("#featured").innerHTML = featuredCard(recs[0], group.length);
-    $("#results").innerHTML = recs.slice(1).map((rec, i) => pickCard(rec, i + 1)).join("");
+    $("#results").innerHTML = recs.slice(1, state.shown).map((rec, i) => pickCard(rec, i + 1)).join("");
   }
-  $("#more-title").textContent = recs.length > 1 ? "More picks" : "";
+  const visible = Math.min(state.shown, recs.length);
+  $("#more-title").textContent = recs.length > 1 ? `More picks · ${visible} of ${recs.length}` : "";
+  const more = $("#show-more");
+  more.hidden = recs.length <= state.shown;
+  more.textContent = `Show ${Math.min(PAGE, recs.length - state.shown)} more (${recs.length - state.shown} left)`;
   const ex = $("#excluded");
   ex.hidden = !excluded.length;
   ex.querySelector("summary").textContent = `Ruled out for this group (${excluded.length})`;
@@ -332,6 +350,33 @@ function renderResults() {
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-open]");
   if (t) openSheet(Number(t.dataset.open));
+});
+
+$("#show-more").addEventListener("click", () => {
+  state.shown += PAGE;
+  const before = document.querySelectorAll("#results .pick").length;
+  $("#results").insertAdjacentHTML("beforeend", current.recs.slice(before + 1, state.shown).map((rec, i) => pickCard(rec, before + i + 1)).join(""));
+  const visible = Math.min(state.shown, current.recs.length);
+  $("#more-title").textContent = `More picks · ${visible} of ${current.recs.length}`;
+  const more = $("#show-more");
+  more.hidden = current.recs.length <= state.shown;
+  more.textContent = `Show ${Math.min(PAGE, current.recs.length - state.shown)} more (${current.recs.length - state.shown} left)`;
+  if ($("#mapview").classList.contains("active")) renderMap();
+});
+
+// A visible note when the budget filter is narrowing things, since most map prices are estimates.
+function renderFilterNote() {
+  const on = state.priceMin > 1 || state.priceMax < 500;
+  $("#filter-note").innerHTML = on
+    ? `<div class="filter-note"><span>💸 Budget filter on: <b>$${state.priceMin} – $${state.priceMax}${state.priceMax >= 500 ? "+" : ""}</b>. Most prices are rough estimates, so this can hide good spots.</span><button class="text-btn" id="reset-budget">Reset</button></div>`
+    : "";
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#reset-budget")) return;
+  $("#bmin").value = 0; $("#bmax").value = 100;
+  state.priceMin = 1; state.priceMax = 500;
+  renderBudget();
+  update();
 });
 
 // ---- detail sheet -------------------------------------------------------------------------
@@ -395,7 +440,7 @@ if (window.L) {
 }
 
 function renderMap() {
-  const { recs } = current;
+  const recs = current.recs.slice(0, state.shown); // pin what's on screen, not hundreds
   $("#map-sub").textContent = recs.length ? `Your top ${recs.length} picks, numbered like on the home screen.` : "Pick who's eating on the home screen first.";
   const pinned = recs.map((rec, i) => ({ rec, i })).filter(({ rec }) => rec.restaurant.lat != null);
   const missing = recs.length - pinned.length;
@@ -478,7 +523,7 @@ function update() {
   store.set("ffo.plan", state.plan);
   renderPeople();
   renderPlans();
-  renderMoods();
+  renderCuisines();
   $("#nearby").setAttribute("aria-pressed", state.nearby);
   $("#hangout").setAttribute("aria-pressed", state.hangout);
   renderResults();

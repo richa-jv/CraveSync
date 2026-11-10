@@ -62,10 +62,10 @@
 
           <div class="block">
             <div class="block-head">
-              <h2>In the mood for…</h2>
-              <button class="text-btn" id="clear-mood" hidden>Clear</button>
+              <h2>What are you craving?</h2>
+              <button class="text-btn" id="clear-cuisines" hidden>Clear</button>
             </div>
-            <div id="moods" class="moods"></div>
+            <div id="cuisines" class="cuisines" role="group" aria-label="Cuisines"></div>
           </div>
 
           <div class="quick">
@@ -76,12 +76,14 @@
         </div>
 
         <div class="results">
+          <div id="filter-note"></div>
           <div id="featured"></div>
           <div class="block-head list-head">
             <h2 id="more-title">More picks</h2>
             <button class="text-btn" data-go="mapview">See on map →</button>
           </div>
           <div id="results" class="list"></div>
+          <button id="show-more" class="btn light show-more" hidden></button>
           <details id="excluded" class="excluded" hidden><summary></summary><ul></ul></details>
         </div>
       </div>

@@ -402,3 +402,19 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--fores
 
 .rating-pill { color: var(--ink-2); font-weight: 700; }
 .rating-pill small { color: var(--muted); font-weight: 600; }
+
+.show-more { width: 100%; margin-top: 12px; }
+.filter-note { display: flex; gap: 12px; align-items: center; justify-content: space-between; background: var(--warn-soft); color: var(--warn); border-radius: 16px; padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; }
+.filter-note b { color: var(--ink); }
+
+/* cuisine picker */
+.cuisines { display: flex; flex-wrap: wrap; gap: 8px; }
+.cchip {
+  border: 0; background: var(--surface); box-shadow: var(--shadow); padding: 9px 13px; border-radius: 999px; cursor: pointer;
+  font-weight: 600; font-size: 14px; color: var(--ink-2); white-space: nowrap; transition: all .15s;
+}
+.cchip small { color: var(--muted); font-weight: 700; margin-left: 2px; }
+.cchip[aria-pressed="true"] { background: var(--forest); color: #fff; }
+.cchip[aria-pressed="true"] small { color: var(--lime); }
+.cchip.more { background: transparent; box-shadow: none; color: var(--forest-2); font-weight: 700; }
+[data-theme="bold"] .cchip[aria-pressed="true"] small { color: #fff; }

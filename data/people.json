@@ -185,7 +185,16 @@
   },
   {
     "name": "Mihir",
-    "favorite_cuisines": [],
+    "favorite_cuisines": [
+      "indian",
+      "pakistani",
+      "nepalese",
+      "caribbean",
+      "jamaican",
+      "ethiopian",
+      "somali",
+      "afghan"
+    ],
     "favorite_places": [
       "Jerusalem Shawarma",
       "Tim Hortons",
@@ -196,7 +205,12 @@
       "Osmow's"
     ],
     "favorite_dishes": [
-      "5 dollar ramen"
+      "5 dollar ramen",
+      "goat curry",
+      "curry goat",
+      "goat biryani",
+      "mutton",
+      "goat"
     ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
@@ -204,8 +218,8 @@
     "calorie_goal_per_meal": null,
     "budget": 20,
     "max_travel_min": 30,
-    "likes_text": "eats genuinely anything, any meat",
-    "notes": ""
+    "likes_text": "eats genuinely anything, any meat, and loves goat dishes like goat curry, curry goat, mutton and goat biryani",
+    "notes": "Eats anything, and loves goat: goat curry, curry goat, mutton, goat biryani."
   },
   {
     "name": "Aahil",

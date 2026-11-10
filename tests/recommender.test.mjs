@@ -194,3 +194,27 @@ test("a place name with no Latin letters doesn't match every go-to", () => {
   assert.ok(!samePlace("Tim Hortons", "爱民顿"));
   assert.ok(!samePlace("爱民顿", "Tim Hortons"));
 });
+
+test("cuisine picker matches whole words and tags, not lookalikes", async () => {
+  const { CUISINES, matchesCuisine, extraCuisines } = await import("../lib/cuisines.js");
+  const c = Object.fromEntries(CUISINES.map((x) => [x.id, x]));
+  const place = (o) => ({ name: "", cuisines: [], dishes: [], tags: [], good_for: [], ...o });
+  assert.ok(matchesCuisine(place({ name: "My Tea", dishes: ["bubble tea"] }), c.boba));
+  assert.ok(!matchesCuisine(place({ name: "Steakhouse", dishes: ["steak"] }), c.boba));
+  assert.ok(matchesCuisine(place({ name: "Subway" }), c.sandwiches));
+  assert.ok(!matchesCuisine(place({ name: "SUBmart", dishes: ["pizza"] }), c.sandwiches));
+  assert.ok(matchesCuisine(place({ name: "Starbucks", dishes: ["matcha latte"] }), c.matcha));
+  assert.ok(matchesCuisine(place({ name: "Jerusalem Shawarma", cuisines: ["shawarma"] }), c.arabic));
+  assert.ok(matchesCuisine(place({ name: "Tim Hortons", good_for: ["dessert"] }), c.dessert));
+  const extras = extraCuisines([place({ cuisines: ["ethiopian"] }), place({ cuisines: ["ethiopian"] }), place({ cuisines: ["korean"] })]);
+  assert.deepEqual(extras.map((x) => x.label), ["Ethiopian"]);
+});
+
+test("favourite dishes also match whole words in a place's name", () => {
+  const base = R.find((r) => r.name === "SAMPLE Indian Kitchen");
+  const data = [{ ...base, name: "Goat Curry House", dishes: [] }, { ...base, name: "Pancake House", dishes: [] }];
+  const goat = recommend([P.Mihir], data, { occasion: "dinner" }).recs.find((r) => r.restaurant.name === "Goat Curry House");
+  assert.ok(goat.reasons.some((x) => x.includes("goat curry fix")), goat.reasons.join(" | "));
+  const pancake = recommend([P.Riri], data, { occasion: "dinner" }).recs.find((r) => r.restaurant.name === "Pancake House");
+  assert.ok(!pancake.reasons.some((x) => x.includes("cake fix")), pancake.reasons.join(" | "));
+});
