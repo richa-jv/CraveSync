@@ -164,7 +164,8 @@ test("dessert and on-campus plans are worked out from the data", () => {
 test("reasons read like a friend wrote them", () => {
   const group = recommend([P.Harshi, P.Star, P.Riri], R, { occasion: "coffee", topN: 5 }).recs;
   const all = group.flatMap((r) => r.reasons).join(" | ");
-  assert.match(all, /Loved by [A-Z][a-z]+(, [A-Z][a-z]+)*( & [A-Z][a-z]+)?/);
+  assert.match(all, /🤤 [A-Z][a-z]+(, [A-Z][a-z]+)*( & [A-Z][a-z]+)? (would|is|are) /);
+  assert.ok(!/Loved by/.test(all), "taste matches must not claim anyone has been there");
   assert.ok(!/has \w+ for/.test(all), all);
   const solo = recommend([P.Star], R, { occasion: "coffee", craving: "matcha", topN: 3 }).recs.flatMap((r) => r.reasons);
   assert.ok(solo.includes("🍵 Your matcha fix"), solo.join(" | "));
@@ -217,4 +218,11 @@ test("favourite dishes also match whole words in a place's name", () => {
   assert.ok(goat.reasons.some((x) => x.includes("goat curry fix")), goat.reasons.join(" | "));
   const pancake = recommend([P.Riri], data, { occasion: "dinner" }).recs.find((r) => r.restaurant.name === "Pancake House");
   assert.ok(!pancake.reasons.some((x) => x.includes("cake fix")), pancake.reasons.join(" | "));
+});
+
+test("taste guesses are phrased as guesses, singular and plural", () => {
+  const base = R.find((r) => r.name === "SAMPLE Thai Kitchen");
+  const data = ["Syphay", "Thai One", "Thai Two", "Thai Three", "Thai Four"].map((name) => ({ ...base, name }));
+  const solo = recommend([P.Star, P.Animesh], data, { occasion: "dinner", topN: 10 }).recs.flatMap((r) => r.reasons).filter((x) => x.startsWith("🤤"));
+  assert.ok(solo.length && solo.every((x) => /^🤤 Star (would|is) /.test(x)), solo.join(" | "));
 });

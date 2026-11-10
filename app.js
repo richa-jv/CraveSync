@@ -81,7 +81,8 @@ function artFor(r) {
   for (const c of r.cuisines[0] ?? r.name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return { emoji, tone: h % 6 };
 }
-const price = (c) => (c <= 10 ? "$" : c <= 18 ? "$$" : "$$$");
+// $ = up to $10 per person, $$ = $11-$34, $$$ = $35 and up.
+const price = (c) => (c <= 10 ? "$" : c < 35 ? "$$" : "$$$");
 // Do we know where it is? (Hand-added places without a location yet say "Location TBC" once, not twice.)
 const known = (r) => !(r.distance_km == null && r.travel_min == null);
 function tripText(r) {
@@ -263,14 +264,14 @@ function ratingWarning(r) {
 }
 const warningsFor = (rec, n) => [ratingWarning(rec.restaurant), rec.restaurant.heads_up || null, ...new Set(rec.perPerson.flatMap((p) => p.warnings))].filter(Boolean).slice(0, n);
 
-// The rating line already says these people love it, so drop "Loved by"/"go-to" lines that only repeat them.
+// The rating line already says these people love it, so drop guess/go-to lines that only repeat them.
 function withRating(rec) {
   const rr = ratingReason(rec.restaurant);
   const perks = rec.restaurant.perks ?? [];
   if (!rr) return [...perks, ...rec.reasons];
   const raters = new Set(peopleList.map((p) => p.name).filter((n) => rr.includes(n)));
   const repeats = (x) => {
-    if (!/^(❤️|📍)/.test(x)) return false;
+    if (!/^(🤤|📍)/.test(x)) return false;
     if (rr.startsWith("⭐ You") || rr.startsWith("⭐ Everyone")) return true;
     const named = peopleList.map((p) => p.name).filter((n) => x.includes(n));
     return named.length > 0 && named.every((n) => raters.has(n));
@@ -355,7 +356,8 @@ document.addEventListener("click", (e) => {
 });
 
 $("#show-more").addEventListener("click", () => {
-  state.shown += PAGE;
+  if (state.shown >= current.recs.length) return; // nothing left to show
+  state.shown = Math.min(state.shown + PAGE, current.recs.length);
   const before = document.querySelectorAll("#results .pick").length;
   $("#results").insertAdjacentHTML("beforeend", current.recs.slice(before + 1, state.shown).map((rec, i) => pickCard(rec, before + i + 1)).join(""));
   const visible = Math.min(state.shown, current.recs.length);
