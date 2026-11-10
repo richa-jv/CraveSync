@@ -144,3 +144,85 @@ def test_station_coordinates_come_from_the_map_when_close_enough():
 
 def test_places_off_the_lrt_that_arent_drive_thrus_are_skipped():
     assert fp.to_row(el("Mill Woods Grill", "restaurant", lat=53.4550, lon=-113.4230)) is None
+
+
+def test_hand_added_places_get_map_details_without_losing_your_edits():
+    existing = pd.DataFrame([
+        {"name": "ACE Coffee Roasters", "location": "Garneau", "dishes": "london fog;coffee", "avg_cost": 8,
+         "distance_km": 0.9, "source": "manual", "verified": "no"},
+        {"name": "Mood Cafe", "location": "", "dishes": "vietnamese coffee", "avg_cost": 8, "distance_km": "", "source": "manual"},
+    ])
+    fetched = pd.DataFrame([
+        {"name": "ACE Coffee Roasters Garneau", "location": "Garneau", "dishes": "", "avg_cost": 8, "distance_km": 0.8,
+         "lat": 53.52, "lon": -113.51, "opening_hours": "Mo-Su 07:00-18:00", "travel_min": 13, "how": "13 min walk from campus",
+         "near_station": "University", "source": "osm", "osm_id": "node/1"},
+        {"name": "Mood Cafe", "location": "Strathcona", "dishes": "", "avg_cost": 8, "distance_km": 2.4, "lat": 53.515, "lon": -113.49,
+         "opening_hours": "", "travel_min": 18, "how": "one bus from campus", "near_station": "University", "source": "osm", "osm_id": "node/2"},
+    ])
+    out = fp.merge(existing, fetched, keep_samples=False).set_index("name")
+    assert len(out) == 2  # no duplicates
+    ace = out.loc["ACE Coffee Roasters"]
+    assert ace["lat"] == 53.52 and ace["opening_hours"] == "Mo-Su 07:00-18:00" and ace["travel_min"] == 13
+    assert ace["dishes"] == "london fog;coffee" and ace["location"] == "Garneau"  # your edits kept
+    mood = out.loc["Mood Cafe"]
+    assert mood["location"] == "Strathcona" and mood["distance_km"] == 2.4
+
+
+def test_busy_areas_are_skipped_not_fatal(monkeypatch):
+    calls = []
+
+    def fake_run_query(q, rounds=3):
+        calls.append(q)
+        if "drive_through" in q:
+            raise fp.MapUnavailable("HTTP Error 502: Bad Gateway")
+        return [el("Same Cafe", "cafe"), el(f"Spot {len(calls)}", "restaurant") | {"id": 100 + len(calls)}]
+
+    monkeypatch.setattr(fp, "run_query", fake_run_query)
+    monkeypatch.setattr(fp.time, "sleep", lambda s: None)
+    elements, failed = fp.fetch_all(*fp.CAMPUS, 3000)
+    assert failed == ["drive-thrus"]
+    assert len(calls) == len(fp.STATIONS) + 2          # campus + every station + drive-thrus
+    assert len([e for e in elements if e["tags"]["name"] == "Same Cafe"]) == 1   # de-duplicated
+
+
+def test_retries_then_gives_up_cleanly(monkeypatch):
+    tries = []
+
+    def boom(*a, **k):
+        tries.append(1)
+        raise OSError("HTTP Error 502: Bad Gateway")
+
+    monkeypatch.setattr(fp.urllib.request, "urlopen", boom)
+    monkeypatch.setattr(fp.time, "sleep", lambda s: None)
+    import pytest
+    with pytest.raises(fp.MapUnavailable):
+        fp.run_query("[out:json];node(1);out;", rounds=2)
+    assert len(tries) == 2 * len(fp.ENDPOINTS)
+
+
+def test_partial_run_keeps_places_from_skipped_areas():
+    existing = pd.DataFrame([
+        {"name": "Clareview Pho", "distance_km": 11, "source": "osm", "verified": "no", "osm_id": "node/7"},
+        {"name": "Old Campus Cafe", "distance_km": 0.3, "source": "osm", "verified": "no", "osm_id": "node/8"},
+    ])
+    fetched = pd.DataFrame([{"name": "Old Campus Cafe", "distance_km": 0.3, "source": "osm", "osm_id": "node/8"}])
+    assert sorted(fp.merge(existing, fetched, False, partial=True)["name"]) == ["Clareview Pho", "Old Campus Cafe"]
+    assert sorted(fp.merge(existing, fetched, False, partial=False)["name"]) == ["Old Campus Cafe"]
+
+
+def test_enrich_respects_your_rough_location_and_uses_drive_thru_branches():
+    existing = pd.DataFrame([
+        {"name": "ACE Coffee Roasters", "location": "Garneau", "distance_km": 0.9, "source": "manual"},
+        {"name": "McDonald's", "location": "Near campus", "distance_km": 1.0, "source": "manual"},
+    ])
+    fetched = pd.DataFrame([
+        {"name": "McDonald's (drive-thru, Garneau)", "location": "Garneau", "distance_km": 1.08, "lat": 53.5207, "lon": -113.5116,
+         "travel_min": 12, "how": "one bus from campus", "source": "osm", "osm_id": "way/1"},
+        {"name": "ACE Coffee Roasters", "location": "Downtown", "distance_km": 2.68, "lat": 53.5424, "lon": -113.4949,
+         "travel_min": 19, "how": "one bus from campus", "source": "osm", "osm_id": "node/2"},
+        {"name": "McDonald's", "location": "Coliseum", "distance_km": 7.54, "lat": 53.5846, "lon": -113.4667,
+         "travel_min": 43, "how": "LRT to Coliseum + short bus", "source": "osm", "osm_id": "way/3"},
+    ]).sort_values("travel_min")
+    out = fp.merge(existing, fetched, keep_samples=False).set_index("name")
+    assert out.loc["McDonald's", "lat"] == 53.5207 and out.loc["McDonald's", "travel_min"] == 12
+    assert str(out.loc["ACE Coffee Roasters", "lat"]) in {"", "nan"}  # downtown ACE is too far from your Garneau estimate

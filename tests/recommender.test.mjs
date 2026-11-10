@@ -15,10 +15,17 @@ test("CSV parser handles quoted commas", () => {
   assert.deepEqual(rows, [{ a: "1", b: "x, y" }, { a: "2", b: 'say "hi"' }]);
 });
 
-test("Star never gets places without boneless chicken, fish or seafood", () => {
-  const { recs, excluded } = recommend([P.Star], R, { occasion: "lunch", topN: 50 });
-  for (const r of recs) assert.ok(r.restaurant.proteins.some((p) => ["boneless chicken", "fish", "seafood"].includes(p)));
-  assert.ok(excluded.some((e) => e.reason.includes("Star")));
+test("Star's rule is about meat: veggie places are fine, beef-and-pork-only places aren't", () => {
+  const base = R.find((r) => r.name === "Subway");
+  const data = [
+    { ...base, name: "Veggie Spot", proteins: ["vegetarian"] },
+    { ...base, name: "Ribs Only", proteins: ["beef", "pork"] },
+    { ...base, name: "Sushi Spot", proteins: ["fish", "seafood"] },
+  ];
+  const { recs, excluded } = recommend([P.Star], data, { occasion: "lunch", topN: 10 });
+  assert.deepEqual(names(recs).sort(), ["Sushi Spot", "Veggie Spot"]);
+  assert.equal(excluded[0].name, "Ribs Only");
+  assert.match(excluded[0].reason, /Star only eats boneless chicken, fish or seafood for meat/);
 });
 
 test("Star can still get matcha on a coffee run", () => {
@@ -43,16 +50,19 @@ test("Sahil gets shawarma or pasta first", () => {
 });
 
 test("late-night only returns late-night places", () => {
-  const { recs } = recommend([P.Richa], R, { occasion: "late-night", topN: 20 });
+  const { recs } = recommend([P.Riri], R, { occasion: "late-night", topN: 20 });
   assert.ok(recs.length);
   for (const r of recs) assert.ok(r.restaurant.good_for.includes("late-night"));
 });
 
 test("a place is ruled out for the group if anyone can't eat there", () => {
-  const solo = recommend([P.Harshi], R, { occasion: "lunch", topN: 50 });
-  const group = recommend([P.Harshi, P.Star], R, { occasion: "lunch", topN: 50 });
-  assert.ok(names(solo.recs).includes("Savoy (HUB)"));
-  assert.ok(!names(group.recs).includes("Savoy (HUB)"));
+  const base = R.find((r) => r.name === "Subway");
+  const data = [...R, { ...base, name: "Ribs Only", proteins: ["beef", "pork"] }];
+  const solo = recommend([P.Harshi], data, { occasion: "lunch", topN: 50 });
+  const group = recommend([P.Harshi, P.Star], data, { occasion: "lunch", topN: 50 });
+  assert.ok(names(solo.recs).includes("Ribs Only"));
+  assert.ok(!names(group.recs).includes("Ribs Only"));
+  assert.ok(names(group.recs).includes("Savoy (HUB)")); // vegetarian, so fine for Star
 });
 
 test("unknown menu is kept but flagged", () => {
@@ -147,15 +157,40 @@ test("dessert and on-campus plans are worked out from the data", () => {
   const dessert = recommend([P.Star], R, { occasion: "dessert", topN: 20 }).recs.map((r) => r.restaurant.name);
   assert.ok(dessert.includes("SAMPLE Matcha Cafe"));     // mochi + pastries
   assert.ok(!dessert.includes("SAMPLE Pho Shop"));
-  const campus = recommend([P.Richa], R, { occasion: "on campus", topN: 20 }).recs.map((r) => r.restaurant.location);
+  const campus = recommend([P.Riri], R, { occasion: "on campus", topN: 20 }).recs.map((r) => r.restaurant.location);
   assert.ok(campus.length && campus.every((l) => /^(On campus|SUB|HUB)$/.test(l)));
 });
 
 test("reasons read like a friend wrote them", () => {
-  const group = recommend([P.Harshi, P.Star, P.Richa], R, { occasion: "coffee", topN: 5 }).recs;
+  const group = recommend([P.Harshi, P.Star, P.Riri], R, { occasion: "coffee", topN: 5 }).recs;
   const all = group.flatMap((r) => r.reasons).join(" | ");
   assert.match(all, /Loved by [A-Z][a-z]+(, [A-Z][a-z]+)*( & [A-Z][a-z]+)?/);
   assert.ok(!/has \w+ for/.test(all), all);
   const solo = recommend([P.Star], R, { occasion: "coffee", craving: "matcha", topN: 3 }).recs.flatMap((r) => r.reasons);
   assert.ok(solo.includes("🍵 Your matcha fix"), solo.join(" | "));
+});
+
+test("past ratings nudge picks: a 5★ place rises, a 'meh' 3★ place drops", () => {
+  const base = R.find((r) => r.name === "SAMPLE Thai Kitchen");
+  const data = [{ ...base, name: "Meh Place" }, { ...base, name: "Fave Place" }, { ...base, name: "New Place" }];
+  const ratings = [
+    { person: "Harshi", restaurant: "Meh Place", rating: 3 },
+    { person: "Harshi", restaurant: "Fave Place", rating: 5 },
+  ];
+  const { recs } = recommend([P.Harshi], data, { occasion: "dinner", ratings });
+  assert.deepEqual(names(recs), ["Fave Place", "New Place", "Meh Place"]);
+});
+
+test("reasons say 'everyone' instead of listing the whole group", () => {
+  const base = R.find((r) => r.name === "SAMPLE Ramen House");
+  const data = [{ ...base, name: "Tansen Izakaya", dishes: ["5 dollar ramen", "ramen"] }];
+  const { recs } = recommend(Object.values(P), data, { occasion: "dinner" });
+  const text = recs[0].reasons.join(" | ");
+  assert.match(text, /Everyone's go-to/);
+  assert.match(text, /Everyone's \$5 ramen fix/);
+});
+
+test("a place name with no Latin letters doesn't match every go-to", () => {
+  assert.ok(!samePlace("Tim Hortons", "爱民顿"));
+  assert.ok(!samePlace("爱民顿", "Tim Hortons"));
 });

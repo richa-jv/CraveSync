@@ -1,5 +1,5 @@
-import { OCCASIONS, prepareRestaurants, recommend } from "./lib/recommender.js";
-import { toCSV } from "./lib/csv.js";
+import { OCCASIONS, prepareRestaurants, recommend, samePlace, nameList } from "./lib/recommender.js";
+import { parseCSV, toCSV } from "./lib/csv.js";
 
 const CAMPUS = [53.5263, -113.525];
 const PLAN_LABELS = {
@@ -52,19 +52,21 @@ applyTheme(store.get("ffo.theme", "fresh"));
 $("#theme-btn")?.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "bold" ? "fresh" : "bold"));
 
 // ---- data ----------------------------------------------------------------------------
-const [restaurants, peopleList] = await Promise.all([
+const [restaurants, peopleList, crewRatings] = await Promise.all([
   fetch("data/restaurants.csv").then((r) => r.text()).then(prepareRestaurants),
   fetch("data/people.json").then((r) => r.json()),
+  fetch("data/ratings.csv").then((r) => (r.ok ? r.text() : "")).then((t) => (t ? parseCSV(t) : [])).catch(() => []),
 ]);
 const people = Object.fromEntries(peopleList.map((p) => [p.name, p]));
 const faceColor = Object.fromEntries(peopleList.map((p, i) => [p.name, FACE_COLORS[i % FACE_COLORS.length]]));
 const initials = (n) => n.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 const state = {
-  who: new Set(store.get("ffo.who", ["Richa"]).filter((n) => people[n])),
+  who: new Set(store.get("ffo.who", ["Riri"]).filter((n) => people[n])),
   plan: store.get("ffo.plan", "any"),
   mood: null,
   nearby: false,
+  hangout: false,
   surprise: 0,
   priceMin: 1,
   priceMax: 500,
@@ -83,10 +85,12 @@ function artFor(r) {
 }
 const price = (c) => (c <= 10 ? "$" : c <= 18 ? "$$" : "$$$");
 function tripText(r) {
+  if (r.distance_km == null && r.travel_min == null) return "location TBC";
   if (state.plan === "drive-thru" || r.how === "drive" || r.travel_min == null) return `${r.distance_km} km away`;
   return `~${r.travel_min} min`;
 }
 function howText(r) {
+  if (r.distance_km == null && r.travel_min == null) return "Location not added yet (run the map import)";
   if (state.plan === "drive-thru" || r.how === "drive") return `${r.distance_km} km from campus by car`;
   return r.how || `~${r.travel_min} min walk from campus`;
 }
@@ -126,7 +130,7 @@ $("#people").addEventListener("click", (e) => {
   update();
 });
 $("#pick-all").addEventListener("click", () => { state.who = new Set(Object.keys(people)); update(); });
-$("#pick-none").addEventListener("click", () => { state.who = new Set(["Richa"].filter((n) => people[n])); update(); });
+$("#pick-none").addEventListener("click", () => { state.who = new Set(["Riri"].filter((n) => people[n])); update(); });
 
 function renderPlans() {
   $("#plans").innerHTML = ["any", ...OCCASIONS]
@@ -179,6 +183,7 @@ for (const id of ["#bmin", "#bmax"]) {
 }
 renderBudget();
 $("#nearby").addEventListener("click", () => { state.nearby = !state.nearby; update(); });
+$("#hangout").addEventListener("click", () => { state.hangout = !state.hangout; update(); });
 const surprise = (e) => { e?.preventDefault(); state.surprise = 1 + Math.floor(Math.random() * 1e6); update(); };
 $("#surprise").addEventListener("click", surprise);
 
@@ -191,10 +196,14 @@ function compute() {
   const filters = [];
   if (mood?.maxCost) filters.push((r) => r.avg_cost <= mood.maxCost);
   if (state.priceMin > 1 || state.priceMax < 500) filters.push((r) => r.avg_cost >= state.priceMin && r.avg_cost <= state.priceMax);
+  if (state.hangout) filters.push((r) => r.perks.length > 0);
   if (state.nearby) filters.push((r) => r.travel_min != null && r.travel_min <= 15 && r.how !== "drive");
   const where = filters.length ? (r) => filters.every((f) => f(r)) : null;
   const craving = mood?.craving ?? "";
-  const res = recommend(group, restaurants, { occasion, craving, topN: state.surprise ? 12 : 8, where });
+  const res = recommend(group, restaurants, { occasion, craving, topN: state.surprise ? 12 : 8, where, ratings: allRatings() });
+  // How many places exist for this plan at all, before anyone's food rules are applied.
+  res.available = restaurants.filter((r) => (occasion === "any" || r.good_for.includes(occasion)) && (!where || where(r))).length;
+  res.occasion = occasion;
   if (state.surprise && res.recs.length > 1) {
     const i = state.surprise % res.recs.length;
     const [pick] = res.recs.splice(i, 1);
@@ -203,19 +212,73 @@ function compute() {
   return { ...res, group };
 }
 
+// ---- crew ratings (data/ratings.csv + this browser's saved ratings) --------------------------
+function allRatings() {
+  return [...crewRatings, ...ratings].map((x) => ({ ...x, rating: Number(x.rating) })).filter((x) => x.rating >= 1);
+}
+function ratingFor(r) {
+  const rows = allRatings().filter((x) => x.restaurant === r.name || samePlace(x.restaurant, r.name));
+  if (!rows.length) return null;
+  return { avg: rows.reduce((a, x) => a + x.rating, 0) / rows.length, count: rows.length, rows };
+}
+const starText = (avg) => `★ ${avg.toFixed(1)}`;
+function ratingMeta(r) {
+  const rt = ratingFor(r);
+  return rt ? `<span class="rating-pill" title="${rt.count} crew rating${rt.count > 1 ? "s" : ""}">${starText(rt.avg)} <small>(${rt.count})</small></span>` : "";
+}
+// "⭐ Rated 5★ by Harshi, Riri & Star" from the people eating right now.
+function ratingReason(r) {
+  const rt = ratingFor(r);
+  if (!rt) return null;
+  const mine = rt.rows.filter((x) => state.who.has(x.person) && x.rating >= 4);
+  if (!mine.length) return null;
+  const top = Math.max(...mine.map((x) => x.rating));
+  const names = [...new Set(mine.map((x) => x.person))];
+  if (names.length === 1 && state.who.size === 1) return `⭐ You rated it ${top}★`;
+  if (names.length === state.who.size && names.length > 2) return `⭐ Everyone rated it ${top}★`;
+  return `⭐ Rated ${top}★ by ${names.length > 4 ? `${names.slice(0, 3).join(", ")} & ${names.length - 3} more` : nameList(names)}`;
+}
+// "Harshi, Star & Riri thought it was meh (3★)" for low ratings from the people eating now.
+function ratingWarning(r) {
+  const rt = ratingFor(r);
+  if (!rt) return null;
+  const meh = rt.rows.filter((x) => state.who.has(x.person) && x.rating <= 3);
+  if (!meh.length) return null;
+  const names = [...new Set(meh.map((x) => x.person))];
+  const low = Math.min(...meh.map((x) => x.rating));
+  const who = names.length === 1 && state.who.size === 1 ? "You" : names.length > 4 ? `${names.slice(0, 3).join(", ")} & ${names.length - 3} more` : nameList(names);
+  return `${who} thought it was ${low <= 2 ? "not great" : "meh"} (${low}★)`;
+}
+const warningsFor = (rec, n) => [ratingWarning(rec.restaurant), rec.restaurant.heads_up || null, ...new Set(rec.perPerson.flatMap((p) => p.warnings))].filter(Boolean).slice(0, n);
+
+// The rating line already says these people love it, so drop "Loved by"/"go-to" lines that only repeat them.
+function withRating(rec) {
+  const rr = ratingReason(rec.restaurant);
+  const perks = rec.restaurant.perks ?? [];
+  if (!rr) return [...perks, ...rec.reasons];
+  const raters = new Set(peopleList.map((p) => p.name).filter((n) => rr.includes(n)));
+  const repeats = (x) => {
+    if (!/^(❤️|📍)/.test(x)) return false;
+    if (rr.startsWith("⭐ You") || rr.startsWith("⭐ Everyone")) return true;
+    const named = peopleList.map((p) => p.name).filter((n) => x.includes(n));
+    return named.length > 0 && named.every((n) => raters.has(n));
+  };
+  return [rr, ...perks, ...rec.reasons.filter((x) => !repeats(x))];
+}
+
 function featuredCard(rec, groupSize) {
   const r = rec.restaurant;
   const a = artFor(r);
   const label = state.surprise ? "🎲 Surprise pick" : groupSize > 1 ? "✨ Best for the group" : "✨ Top pick for you";
-  const warns = [...new Set(rec.perPerson.flatMap((p) => p.warnings))].slice(0, 2);
+  const warns = warningsFor(rec, 2);
   return `
   <button class="featured" data-open="0">
     <div class="art tone-${a.tone}"><span>${a.emoji}</span><span class="pick-label">${label}</span><span class="match">${Math.round(rec.score * 100)}% match</span></div>
     <div class="body">
-      <div class="meta"><span class="pill">${esc(r.location || "Near campus")}</span><b>${price(r.avg_cost)}</b><span>${ICON.clock.replace("<svg", '<svg style="width:14px;height:14px;vertical-align:-2px"')} ${tripText(r)}</span></div>
+      <div class="meta"><span class="pill">${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b><span>${ICON.clock.replace("<svg", '<svg style="width:14px;height:14px;vertical-align:-2px"')} ${tripText(r)}</span></div>
       <h3>${esc(r.name)}${r.verified === "yes" ? "" : `<span class="badge">unverified</span>`}</h3>
       <p class="muted small" style="margin:2px 0 12px">${esc(howText(r))}</p>
-      <ul class="reasons">${(rec.reasons.length ? rec.reasons : [r.description]).slice(0, 4).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <ul class="reasons">${(withRating(rec).length ? withRating(rec) : [r.description]).slice(0, 4).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
       ${warns.length ? `<div class="warn">Heads up: ${warns.map(esc).join(" · ")}</div>` : ""}
     </div>
   </button>`;
@@ -229,8 +292,9 @@ function pickCard(rec, i) {
     <div class="art tone-${a.tone}">${a.emoji}<span class="num">${i + 1}</span></div>
     <div>
       <div class="pick-top"><h3>${esc(r.name)}</h3><span class="match">${Math.round(rec.score * 100)}%</span></div>
-      <div class="meta"><span>${esc(r.location || "Near campus")}</span><b>${price(r.avg_cost)}</b><span>${tripText(r)}</span></div>
-      <ul class="reasons">${(rec.reasons.length ? rec.reasons : [r.cuisines.join(", ") || "food spot"]).slice(0, 2).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="meta"><span>${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))}</span>${ratingMeta(r)}<b>${price(r.avg_cost)}</b><span>${tripText(r)}</span></div>
+      <ul class="reasons">${(withRating(rec).length ? withRating(rec) : [r.cuisines.join(", ") || "food spot"]).slice(0, 2).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${(() => { const w = [ratingWarning(r), r.heads_up].filter(Boolean)[0]; return w ? `<div class="warn">Heads up: ${esc(w)}</div>` : ""; })()}
     </div>
   </button>`;
 }
@@ -241,8 +305,17 @@ function renderResults() {
   if (!group.length) {
     $("#featured").innerHTML = `<div class="empty"><span class="big">👋</span>Pick who's eating to get started.</div>`;
     $("#results").innerHTML = "";
+  } else if (!recs.length && !current.available) {
+    // The list has no places for this plan (or filters) at all - not a food-rules problem.
+    const plan = PLAN_LABELS[current.occasion]?.replace(/^\S+\s/, "").toLowerCase() ?? "matching";
+    const filtered = state.priceMin > 1 || state.priceMax < 500 || state.nearby || state.hangout || state.mood;
+    $("#featured").innerHTML = filtered
+      ? `<div class="empty"><span class="big">🔍</span>No ${esc(plan)} spots match your budget, mood or distance filters.<br>Try widening them.</div>`
+      : `<div class="empty"><span class="big">🗺️</span>Your restaurant list doesn't have any <b>${esc(plan)}</b> spots yet.<br>Run <code>python scripts/fetch_places.py</code> to pull in real places from the map.</div>`;
+    $("#results").innerHTML = "";
   } else if (!recs.length) {
-    $("#featured").innerHTML = `<div class="empty"><span class="big">🤔</span>Nothing fits everyone right now.<br>Try another plan or mood, or fewer people.</div>`;
+    const why = [...new Set(excluded.map((e) => e.reason))].slice(0, 2).join("; ");
+    $("#featured").innerHTML = `<div class="empty"><span class="big">🤔</span>Nothing here works for everyone.<br><span class="small">${esc(why)}</span><br>Try another plan, or fewer people.</div>`;
     $("#results").innerHTML = "";
   } else {
     $("#featured").innerHTML = featuredCard(recs[0], group.length);
@@ -267,7 +340,7 @@ function openSheet(i) {
   if (!rec) return;
   const r = rec.restaurant;
   const a = artFor(r);
-  const warns = [...new Set(rec.perPerson.flatMap((p) => p.warnings))];
+  const warns = warningsFor(rec, 6);
   const scores = [...rec.perPerson].sort((x, y) => y.score - x.score);
   $("#sheet").innerHTML = `
     <div class="art tone-${a.tone}">${a.emoji}<button class="close" id="sheet-close" aria-label="Close">${ICON.close}</button></div>
@@ -275,16 +348,18 @@ function openSheet(i) {
       <div class="sheet-card">
         <h3>${esc(r.name)}</h3>
         <div class="meta"><span class="match">${Math.round(rec.score * 100)}% match</span><span class="pill">${esc(r.cuisines.slice(0, 2).join(" · ") || "Food")}</span><b>${price(r.avg_cost)} · ~$${Math.round(r.avg_cost)}</b></div>
-        <div class="loc"><span class="ic">${ICON.pin}</span><span>${esc(r.location || "Near campus")} · ${esc(howText(r))}</span></div>
+        <div class="loc"><span class="ic">${ICON.pin}</span><span>${esc(r.location || (r.distance_km == null ? "Location TBC" : "Near campus"))} · ${esc(howText(r))}</span></div>
       </div>
       <div class="band"><span class="ic">${ICON.clock}</span><div><b>${r.opening_hours ? "Opening hours" : "Hours not listed"}</b><span>${esc(r.opening_hours || "Check before you go")}</span></div></div>
       <div class="grid2">
         <div class="tile"><div class="k">Getting there</div><div class="v">${tripText(r)}</div></div>
         <div class="tile"><div class="k">Price per person</div><div class="v">~$${Math.round(r.avg_cost)}${r.verified === "yes" ? "" : " (est.)"}</div></div>
       </div>
+      ${(() => { const rt = ratingFor(r); return rt ? `<div class="tile" style="margin-top:10px"><div class="k">Crew rating</div><div class="v">${starText(rt.avg)} from ${nameList([...new Set(rt.rows.map((x) => x.person))])}</div></div>` : ""; })()}
+      ${r.description ? `<p class="muted small" style="margin:12px 4px 0">${esc(r.description)}</p>` : ""}
       <div class="sheet-card" style="margin-top:12px">
         <h2 style="font-size:18px">Why it works</h2>
-        <ul class="reasons" style="margin-top:10px">${(rec.reasons.length ? rec.reasons : [r.description]).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        <ul class="reasons" style="margin-top:10px">${(withRating(rec).length ? withRating(rec) : [r.description]).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
         ${scores.length > 1 ? `<div class="people-scores">${scores.map((p) => `
           <div class="ps"><span class="face" style="background:${faceColor[p.name]}">${esc(initials(p.name))}</span><span class="track"><i style="width:${Math.round(p.score * 100)}%"></i></span><span class="pc">${Math.round(p.score * 100)}%</span></div>`).join("")}</div>` : ""}
         ${warns.length ? `<div class="warn">Heads up: ${warns.map(esc).join(" · ")}</div>` : ""}
@@ -364,9 +439,15 @@ $("#save-rating").addEventListener("click", () => {
   renderRatings();
 });
 function renderRatings() {
-  $("#ratings-list").innerHTML = ratings.length
-    ? [...ratings].reverse().map((r) => `<div class="rating-row"><span><b>${esc(r.person)}</b> · ${esc(r.restaurant)}</span><span class="stars-txt">${"★".repeat(r.rating)}</span></div>`).join("")
-    : `<p class="muted small">No ratings yet.</p>`;
+  const mine = [...ratings].reverse().map((r) => `<div class="rating-row"><span><b>${esc(r.person)}</b> · ${esc(r.restaurant)} <span class="muted small">(new)</span></span><span class="stars-txt">${"★".repeat(r.rating)}</span></div>`);
+  // Crew ratings from data/ratings.csv, grouped by place.
+  const byPlace = new Map();
+  for (const x of crewRatings) byPlace.set(x.restaurant, [...(byPlace.get(x.restaurant) ?? []), x]);
+  const crew = [...byPlace].map(([place, rows]) => {
+    const avg = rows.reduce((a, x) => a + Number(x.rating), 0) / rows.length;
+    return `<div class="rating-row"><span><b>${esc(place)}</b> · ${esc(nameList(rows.map((x) => x.person)))}</span><span class="stars-txt">${starText(avg)}</span></div>`;
+  });
+  $("#ratings-list").innerHTML = mine.length || crew.length ? [...mine, ...crew].join("") : `<p class="muted small">No ratings yet.</p>`;
 }
 $("#download").addEventListener("click", () => {
   const blob = new Blob([toCSV(ratings, ["person", "restaurant", "rating", "date"])], { type: "text/csv" });
@@ -384,7 +465,9 @@ $("#crew-grid").innerHTML = peopleList.map((p) => `
       <div><h3>${esc(p.name)}</h3><p>$${p.budget ?? 20} budget · up to ${p.max_travel_min ?? 30} min away${p.calorie_goal_per_meal ? ` · ~${p.calorie_goal_per_meal} cal/meal` : ""}</p></div></div>
     <div class="crew-sec"><div class="k">Loves</div><div class="tags">${tags(p.favorite_cuisines, "green")}</div></div>
     ${p.favorite_places?.length ? `<div class="crew-sec"><div class="k">Go-tos</div><div class="tags">${tags(p.favorite_places)}</div></div>` : ""}
-    <div class="crew-sec"><div class="k">Can eat</div><div class="tags">${tags(p.can_eat_proteins)}</div></div>
+    <div class="crew-sec"><div class="k">Meat</div><div class="tags">${p.can_eat_proteins?.length
+      ? tags(p.can_eat_proteins.filter((x) => x !== "vegetarian")) + '<span class="tag green">+ all veggie food</span>'
+      : '<span class="tag">eats any meat</span>'}</div></div>
     ${[...(p.avoid_cuisines ?? []), ...(p.soft_avoid ?? [])].length ? `<div class="crew-sec"><div class="k">Avoids</div><div class="tags">${tags([...(p.avoid_cuisines ?? []), ...(p.soft_avoid ?? [])], "red")}</div></div>` : ""}
     ${p.notes ? `<p class="crew-note">${esc(p.notes)}</p>` : ""}
   </div>`).join("");
@@ -397,6 +480,7 @@ function update() {
   renderPlans();
   renderMoods();
   $("#nearby").setAttribute("aria-pressed", state.nearby);
+  $("#hangout").setAttribute("aria-pressed", state.hangout);
   renderResults();
 }
 renderStars();

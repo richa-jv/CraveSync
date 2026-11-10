@@ -399,3 +399,6 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid var(--fores
 .range-ticks span:first-child { transform: none; }
 .range-ticks span:last-child { transform: translateX(-100%); }
 [data-theme="bold"] .budget-label { color: var(--forest); }
+
+.rating-pill { color: var(--ink-2); font-weight: 700; }
+.rating-pill small { color: var(--muted); font-weight: 600; }

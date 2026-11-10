@@ -4,7 +4,7 @@ Subway,On campus,sandwiches,sub;wrap;salad,boneless chicken;beef;pork;fish;veget
 Bar Burrito (SUB),SUB,mexican,burrito;bowl;tacos;nachos,boneless chicken;beef;vegetarian,14,0.3,lunch;dinner,light-options,"Burritos and bowls built your way, fast and filling",no,manual
 Panda Express,On campus,chinese,orange chicken;chow mein;fried rice;beef broccoli,boneless chicken;beef;seafood;vegetarian,14,0.3,lunch;dinner,greasy;high-sodium;sugary,American-Chinese plates like orange chicken and chow mein,no,manual
 Ho Ho Chinese,On campus,chinese,fried rice;noodles;ginger beef;sweet and sour chicken,boneless chicken;beef;pork;seafood;vegetarian,14,0.4,lunch;dinner,greasy;high-sodium,Big portions of Chinese comfort food,no,manual
-Savoy (HUB),HUB,,,vegetarian,14,0.3,lunch,,"TODO: Richa, fill in what Savoy serves",no,manual
+Savoy (HUB),HUB,,,vegetarian,14,0.3,lunch,,"TODO: Riri, fill in what Savoy serves",no,manual
 Booster Juice,On campus,smoothies;cafe,smoothie;wrap;protein smoothie,boneless chicken;vegetarian,9,0.3,quick snack;lunch,light-options,"Smoothies, protein shakes and wraps",no,manual
 Starbucks,On campus,cafe,coffee;matcha latte;sandwich;protein box,boneless chicken;pork;vegetarian,10,0.3,coffee;quick snack,coffee;matcha;light-options,"Coffee, matcha lattes and grab-and-go sandwiches",no,manual
 McDonald's,Near campus,burgers;fast food,burger;mcnuggets;mcchicken;filet-o-fish;fries,boneless chicken;beef;pork;fish,12,1.0,quick snack;lunch;dinner;late-night,greasy;high-sodium,"Burgers, nuggets and fries, open late",no,manual

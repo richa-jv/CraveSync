@@ -38,9 +38,12 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "restaurants.csv"
 
 CAMPUS = (53.5263, -113.5250)  # U of A Quad
+# Free public OpenStreetMap servers. They get busy, so we try each in turn.
 ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ]
 FOOD_AMENITIES = "restaurant|cafe|fast_food|ice_cream|food_court"
 DRIVE_AMENITIES = "fast_food|cafe|restaurant|ice_cream"
@@ -205,25 +208,81 @@ out center tags;
 """
 
 
-def run_query(query: str) -> list[dict]:
+class MapUnavailable(Exception):
+    pass
+
+
+def run_query(query: str, rounds: int = 3) -> list[dict]:
+    """Ask the OpenStreetMap servers, retrying with longer pauses when they're busy (502/504/429)."""
     data = urllib.parse.urlencode({"data": query}).encode()
     last_err = None
-    for url in ENDPOINTS:
-        for attempt in range(2):
+    for rnd in range(rounds):
+        for url in ENDPOINTS:
             try:
                 req = urllib.request.Request(url, data=data, headers={"User-Agent": "ffo-match-student-project"})
-                with urllib.request.urlopen(req, timeout=200) as resp:
+                with urllib.request.urlopen(req, timeout=90) as resp:
                     return json.load(resp)["elements"]
-            except Exception as e:  # network errors, rate limits
+            except Exception as e:  # busy server, rate limit, network blip
                 last_err = e
-                time.sleep(5)
-    sys.exit(f"Couldn't reach OpenStreetMap ({last_err}). Check your internet and try again in a minute.")
+                time.sleep(2)
+        time.sleep(5 * (rnd + 1))  # back off before the next round
+    raise MapUnavailable(str(last_err))
+
+
+def area_queries(lat: float, lon: float, radius: int, stations=STATIONS) -> list[tuple[str, str]]:
+    """Small queries, one per area, so busy servers don't time out on one giant request."""
+    def food(ring: str) -> str:
+        return f"""
+[out:json][timeout:60];
+(
+  nwr["amenity"~"^({FOOD_AMENITIES})$"]["name"]{ring};
+  nwr["shop"="bakery"]["name"]{ring};
+);
+out center tags;
+"""
+    out = [("campus", food(f"(around:{radius},{lat},{lon})"))]
+    for name, _key, slat, slon, _stops in stations:
+        out.append((f"{name} station", food(f"(around:{int(BUS_REACH_KM * 1000)},{slat},{slon})")))
+    bbox = "({},{},{},{})".format(*DRIVE_BBOX)
+    out.append(("drive-thrus", f"""
+[out:json][timeout:60];
+(
+  nwr["amenity"~"^({DRIVE_AMENITIES})$"]["drive_through"~"^(yes|only)$"]["name"]{bbox};
+  nwr["amenity"~"^({DRIVE_AMENITIES})$"]["drive_thru"~"^(yes|only)$"]["name"]{bbox};
+);
+out center tags;
+"""))
+    return out
+
+
+def fetch_all(lat: float, lon: float, radius: int, stations=STATIONS) -> tuple[list[dict], list[str]]:
+    """Run every area query; skip (and report) areas that still fail after retries."""
+    seen: dict[tuple, dict] = {}
+    failed = []
+    queries = area_queries(lat, lon, radius, stations)
+    for i, (label, q) in enumerate(queries, 1):
+        print(f"  [{i}/{len(queries)}] {label}...", end=" ", flush=True)
+        try:
+            els = run_query(q)
+        except MapUnavailable as e:
+            print(f"skipped (map server busy: {e})")
+            failed.append(label)
+            continue
+        new = 0
+        for el in els:
+            key = (el.get("type"), el.get("id"))
+            if key not in seen:
+                seen[key] = el
+                new += 1
+        print(f"{len(els)} places ({new} new)")
+        time.sleep(1)  # be polite to the free servers
+    return list(seen.values()), failed
 
 
 def load_stations() -> list[tuple]:
     try:
         stations = match_stations(run_query(stations_query()))
-    except SystemExit:
+    except MapUnavailable:
         print("Couldn't look up stations on the map; using built-in station locations.")
         return STATIONS
     moved = sum(1 for a, b in zip(STATIONS, stations) if a[2:4] != b[2:4])
@@ -377,11 +436,16 @@ def _col(df: pd.DataFrame, name: str, default: str) -> pd.Series:
     return df[name].fillna(default).astype(str) if name in df else pd.Series(default, index=df.index)
 
 
-def merge(existing: pd.DataFrame, fetched: pd.DataFrame, keep_samples: bool) -> pd.DataFrame:
+def merge(existing: pd.DataFrame, fetched: pd.DataFrame, keep_samples: bool, partial: bool = False) -> pd.DataFrame:
+    """partial=True when some areas were skipped: map places we already had (and didn't get back) are kept."""
     if not keep_samples:
         existing = existing[~existing["name"].astype(str).str.startswith("SAMPLE")]
     # Keep anything added by hand or already checked (verified=yes) - never overwrite your edits.
-    keep = existing[(_col(existing, "source", "manual") != "osm") | (_col(existing, "verified", "no").str.lower() == "yes")]
+    keep_mask = (_col(existing, "source", "manual") != "osm") | (_col(existing, "verified", "no").str.lower() == "yes")
+    if partial:
+        got_back = set(_col(fetched, "osm_id", ""))
+        keep_mask |= ~_col(existing, "osm_id", "").isin(got_back)
+    keep = existing[keep_mask]
     kept_ids = set(_col(keep, "osm_id", ""))
     known = {norm(n) for n in keep["name"]}
     fetched = fetched[~_col(fetched, "osm_id", "").isin(kept_ids - {""})]
@@ -393,12 +457,66 @@ def merge(existing: pd.DataFrame, fetched: pd.DataFrame, keep_samples: bool) -> 
     walk = fetched[~is_drive]
     walk = walk.assign(_k=walk["name"].map(norm)).drop_duplicates("_k").drop(columns="_k")
     walk = walk[~walk["name"].map(norm).isin(known)]
+    # Also drop map places that are clearly one of your hand-added ones ("ACE Coffee Roasters Garneau").
+    kept_names = list(keep["name"].astype(str))
+    walk = walk[~walk["name"].map(lambda n: any(same_place(k, n) for k in kept_names))]
     # Drive-thrus: keep every location (they're named by neighbourhood).
     drive = fetched[is_drive].drop_duplicates("name")
     drive = drive[~drive["name"].isin(set(keep["name"]))]
 
+    keep = enrich(keep, fetched)
     out = pd.concat([keep, walk, drive], ignore_index=True)
-    return out.sort_values("distance_km").reset_index(drop=True)
+    return out.sort_values("distance_km", na_position="last").reset_index(drop=True)
+
+
+ENRICH_COLS = ["lat", "lon", "opening_hours", "travel_min", "how", "near_station", "distance_km", "osm_id"]
+
+
+def _words(name: str) -> list[str]:
+    text = re.sub(r"\(.*?\)", " ", str(name).lower()).replace("'", "").replace("\u2019", "")
+    return [w for w in re.split(r"[^a-z0-9]+", text) if w]
+
+
+def same_place(a: str, b: str) -> bool:
+    """'ACE Coffee Roasters' matches 'ACE Coffee Roasters Garneau'; 'Bar Burrito (SUB)' matches 'Bar Burrito'."""
+    x, y = _words(a), _words(b)
+    if not x or not y:
+        return False
+    short, long = (x, y) if len(x) <= len(y) else (y, x)
+    return long[: len(short)] == short
+
+
+def enrich(keep: pd.DataFrame, fetched: pd.DataFrame) -> pd.DataFrame:
+    """Fill in map details (pin, hours, travel time, area) for hand-added places, without touching
+    anything you typed yourself (name, dishes, price, proteins, description)."""
+    keep = keep.copy()
+    for col in ENRICH_COLS + ["location"]:
+        if col not in keep:
+            keep[col] = ""
+        keep[col] = keep[col].astype(object)
+    if fetched.empty:
+        return keep
+    for i, row in keep.iterrows():
+        if str(row.get("lat", "")).strip() not in {"", "nan"}:
+            continue  # already has coordinates
+        matches = fetched[fetched["name"].map(lambda n: same_place(row["name"], n))]
+        if matches.empty:
+            continue
+        # If you gave a rough distance, only trust a map location within ~1 km of it
+        # (e.g. "ACE Coffee Roasters" in Garneau shouldn't grab a downtown ACE).
+        mine = pd.to_numeric(pd.Series([row.get("distance_km")]), errors="coerce").iloc[0]
+        if pd.notna(mine):
+            gap = (pd.to_numeric(matches["distance_km"], errors="coerce") - mine).abs()
+            matches = matches[gap <= 1.0].assign(_gap=gap[gap <= 1.0]).sort_values("_gap")
+            if matches.empty:
+                continue
+        best = matches.iloc[0]  # closest to your estimate, or the quickest trip from campus
+        for col in ENRICH_COLS:
+            if col in best and str(best[col]) not in {"", "nan"}:
+                keep.at[i, col] = best[col]
+        if str(row.get("location", "")).strip() in {"", "nan"}:
+            keep.at[i, "location"] = best.get("location", "")
+    return keep
 
 
 def main() -> None:
@@ -411,20 +529,27 @@ def main() -> None:
     print("Looking up LRT stations...")
     stations = load_stations()
     print(f"Fetching food spots around campus and within a 15-min walk/bus of {len(stations)} LRT stations,")
-    print("plus drive-thrus from Southgate up to Kingsway and Clareview. This can take a minute...")
-    elements = run_query(overpass_query(*CAMPUS, args.radius, stations))
+    print("plus drive-thrus from Southgate up to Kingsway and Clareview. This takes a few minutes...")
+    elements, failed = fetch_all(*CAMPUS, args.radius, stations)
+    if not elements:
+        sys.exit("The OpenStreetMap servers are too busy right now and nothing came back. "
+                 "Your restaurant list wasn't changed. Try again in 10-15 minutes.")
     rows = [r for el in elements if (r := to_row(el, args.radius / 1000, stations))]
     fetched = pd.DataFrame(rows)
     n_drive = fetched["good_for"].str.contains("drive-thru").sum()
     print(f"Found {len(fetched)} places on the map ({n_drive} drive-thrus).")
+    if failed:
+        print(f"Note: {len(failed)} area(s) were skipped because the server was busy: {', '.join(failed)}.")
+        print("      Places you already have there are kept. Run the script again later to fill them in.")
 
     existing = pd.read_csv(OUT) if OUT.exists() else pd.DataFrame(columns=fetched.columns)
-    merged = merge(existing, fetched, args.keep_samples)
+    merged = merge(existing, fetched, args.keep_samples, partial=bool(failed))
     added = (merged["source"] == "osm").sum()
 
     print(merged["location"].value_counts().head(25).to_string())
     if args.dry_run:
-        print(merged[["name", "location", "distance_km", "good_for"]].to_string(index=False))
+        print(merged[["name", "location", "distance_km", "good_for"]].head(40).to_string(index=False))
+        print(f"... {len(merged)} places in total (dry run: nothing was saved)")
         return
     merged.to_csv(OUT, index=False)
     print(f"\nSaved {len(merged)} places to {OUT} ({added} from the map). "

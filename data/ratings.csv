@@ -1,1 +1,111 @@
 person,restaurant,rating,date
+Riri,Tim Hortons,5,2026-11-10
+Harshi,Tim Hortons,5,2026-11-10
+Star,Tim Hortons,5,2026-11-10
+Animesh,Tim Hortons,5,2026-11-10
+Mihir,Tim Hortons,5,2026-11-10
+Aahil,Tim Hortons,5,2026-11-10
+Sahil,Tim Hortons,5,2026-11-10
+Atreyi,Tim Hortons,5,2026-11-10
+Reon,Tim Hortons,5,2026-11-10
+Riri,Chipotle,5,2026-11-10
+Harshi,Chipotle,5,2026-11-10
+Star,Chipotle,5,2026-11-10
+Riri,McDonald's,5,2026-11-10
+Harshi,McDonald's,5,2026-11-10
+Star,McDonald's,5,2026-11-10
+Riri,Wendy's,5,2026-11-10
+Harshi,Wendy's,5,2026-11-10
+Star,Wendy's,5,2026-11-10
+Riri,Subway,5,2026-11-10
+Harshi,Subway,5,2026-11-10
+Star,Subway,5,2026-11-10
+Riri,SUBmart,5,2026-11-10
+Riri,Ho Ho Chinese,5,2026-11-10
+Harshi,Ho Ho Chinese,5,2026-11-10
+Star,Ho Ho Chinese,5,2026-11-10
+Riri,Savoy (HUB),5,2026-11-10
+Riri,ACE Coffee Roasters,5,2026-11-10
+Harshi,Mood Cafe,5,2026-11-10
+Star,Mood Cafe,5,2026-11-10
+Riri,Earls Kitchen + Bar,5,2026-11-10
+Harshi,Earls Kitchen + Bar,5,2026-11-10
+Star,Earls Kitchen + Bar,5,2026-11-10
+Animesh,Earls Kitchen + Bar,5,2026-11-10
+Mihir,Earls Kitchen + Bar,5,2026-11-10
+Aahil,Earls Kitchen + Bar,5,2026-11-10
+Sahil,Earls Kitchen + Bar,5,2026-11-10
+Atreyi,Earls Kitchen + Bar,5,2026-11-10
+Reon,Earls Kitchen + Bar,5,2026-11-10
+Harshi,Little Wolf Restaurant,3,2026-11-10
+Star,Little Wolf Restaurant,3,2026-11-10
+Riri,Little Wolf Restaurant,3,2026-11-10
+Animesh,Little Wolf Restaurant,3,2026-11-10
+Aahil,Little Wolf Restaurant,3,2026-11-10
+Riri,OPA! of Greece,5,2026-11-10
+Harshi,OPA! of Greece,5,2026-11-10
+Star,OPA! of Greece,5,2026-11-10
+Riri,Tansen Izakaya,5,2026-11-10
+Harshi,Tansen Izakaya,5,2026-11-10
+Star,Tansen Izakaya,5,2026-11-10
+Animesh,Tansen Izakaya,5,2026-11-10
+Mihir,Tansen Izakaya,5,2026-11-10
+Aahil,Tansen Izakaya,5,2026-11-10
+Sahil,Tansen Izakaya,5,2026-11-10
+Atreyi,Tansen Izakaya,5,2026-11-10
+Reon,Tansen Izakaya,5,2026-11-10
+Riri,Chachi's,4,2026-11-10
+Star,Chachi's,4,2026-11-10
+Harshi,Chachi's,4,2026-11-10
+Riri,Daily Grind,5,2026-11-10
+Riri,JOEY Bell Tower,5,2026-11-10
+Harshi,JOEY Bell Tower,5,2026-11-10
+Star,JOEY Bell Tower,5,2026-11-10
+Riri,Edo Japan,4,2026-11-10
+Harshi,Edo Japan,4,2026-11-10
+Star,Edo Japan,4,2026-11-10
+Riri,Hanjan,5,2026-11-10
+Harshi,Hanjan,5,2026-11-10
+Star,Hanjan,5,2026-11-10
+Animesh,Hanjan,5,2026-11-10
+Mihir,Hanjan,5,2026-11-10
+Aahil,Hanjan,5,2026-11-10
+Sahil,Hanjan,5,2026-11-10
+Atreyi,Hanjan,5,2026-11-10
+Reon,Hanjan,5,2026-11-10
+Riri,JMT,5,2026-11-10
+Harshi,JMT,5,2026-11-10
+Star,JMT,5,2026-11-10
+Animesh,JMT,5,2026-11-10
+Mihir,JMT,5,2026-11-10
+Aahil,JMT,5,2026-11-10
+Sahil,JMT,5,2026-11-10
+Atreyi,JMT,5,2026-11-10
+Reon,JMT,5,2026-11-10
+Riri,Bar Burrito (SUB),4,2026-11-10
+Harshi,Bar Burrito (SUB),4,2026-11-10
+Star,Bar Burrito (SUB),4,2026-11-10
+Riri,Osmow's,5,2026-11-10
+Harshi,Osmow's,5,2026-11-10
+Star,Osmow's,5,2026-11-10
+Animesh,Osmow's,5,2026-11-10
+Mihir,Osmow's,5,2026-11-10
+Aahil,Osmow's,5,2026-11-10
+Sahil,Osmow's,5,2026-11-10
+Atreyi,Osmow's,5,2026-11-10
+Reon,Osmow's,5,2026-11-10
+Atreyi,Panini's,5,2026-11-10
+Riri,Panini's,5,2026-11-10
+Atreyi,Tokyo Noodle Shop,5,2026-11-10
+Star,Tokyo Noodle Shop,5,2026-11-10
+Harshi,Tokyo Noodle Shop,5,2026-11-10
+Riri,Tokyo Noodle Shop,5,2026-11-10
+Riri,Boston Pizza,4,2026-11-10
+Harshi,Boston Pizza,4,2026-11-10
+Star,Boston Pizza,4,2026-11-10
+Animesh,Boston Pizza,4,2026-11-10
+Mihir,Boston Pizza,4,2026-11-10
+Aahil,Boston Pizza,4,2026-11-10
+Sahil,Boston Pizza,4,2026-11-10
+Atreyi,Boston Pizza,4,2026-11-10
+Reon,Boston Pizza,4,2026-11-10

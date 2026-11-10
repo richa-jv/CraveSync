@@ -1,19 +1,46 @@
 [
   {
-    "name": "Richa",
+    "name": "Riri",
     "favorite_cuisines": [
       "dessert"
     ],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "Tim Hortons",
+      "McDonald's",
+      "Wendy's",
+      "Subway",
+      "Ho Ho Chinese",
+      "Chipotle",
+      "SUBmart",
+      "Savoy (HUB)",
+      "ACE Coffee Roasters",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "OPA! of Greece",
+      "Daily Grind",
+      "JOEY Bell Tower",
+      "Hanjan",
+      "JMT",
+      "Osmow's",
+      "Panini's",
+      "Tokyo Noodle Shop"
     ],
     "favorite_dishes": [
+      "london fog",
       "ice cream",
       "bubble tea",
       "cake",
       "donut",
       "mochi",
-      "matcha"
+      "mcnuggets",
+      "teriyaki chicken",
+      "pizza",
+      "kuttu paratha",
+      "5 dollar ramen",
+      "fries with tzatziki",
+      "chocolate croissant",
+      "pasta"
     ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
@@ -21,8 +48,8 @@
     "calorie_goal_per_meal": null,
     "budget": 20,
     "max_travel_min": 30,
-    "likes_text": "eats anything, loves dessert and trying new places",
-    "notes": "Eats anything, and LOVES dessert."
+    "likes_text": "eats anything, loves dessert, london fog tea lattes and trying new places",
+    "notes": "Eats anything, LOVES dessert, and her drink is a London Fog."
   },
   {
     "name": "Harshi",
@@ -38,13 +65,30 @@
       "Subway",
       "Bar Burrito (SUB)",
       "Ho Ho Chinese",
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "McDonald's",
+      "Wendy's",
+      "Chipotle",
+      "Mood Cafe",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "OPA! of Greece",
+      "JOEY Bell Tower",
+      "Hanjan",
+      "JMT",
+      "Osmow's",
+      "Tokyo Noodle Shop"
     ],
     "favorite_dishes": [
       "coffee",
       "muffin",
       "falafel",
-      "hummus"
+      "hummus",
+      "mcnuggets",
+      "teriyaki chicken",
+      "vietnamese coffee",
+      "5 dollar ramen",
+      "fries with tzatziki"
     ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
@@ -67,7 +111,24 @@
       "vietnamese"
     ],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Tim Hortons",
+      "Panda Express",
+      "Subway",
+      "Bar Burrito (SUB)",
+      "Ho Ho Chinese",
+      "Jerusalem Shawarma",
+      "McDonald's",
+      "Wendy's",
+      "Chipotle",
+      "Mood Cafe",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "OPA! of Greece",
+      "JOEY Bell Tower",
+      "Hanjan",
+      "JMT",
+      "Osmow's",
+      "Tokyo Noodle Shop"
     ],
     "favorite_dishes": [
       "matcha",
@@ -76,7 +137,12 @@
       "boneless wings",
       "chicken burger",
       "seafood",
-      "fish"
+      "fish",
+      "mcnuggets",
+      "teriyaki chicken",
+      "vietnamese coffee",
+      "5 dollar ramen",
+      "fries with tzatziki"
     ],
     "can_eat_proteins": [
       "boneless chicken",
@@ -91,15 +157,23 @@
     "budget": 20,
     "max_travel_min": 30,
     "likes_text": "asian food, japanese, matcha, boneless chicken, fish and seafood",
-    "notes": "Only boneless chicken, fish or seafood. Doesn't like shawarma; at Arabic places she gets shish tawouk."
+    "notes": "Meat-wise she only eats boneless chicken, fish and seafood; everything else (veggie food, dessert, drinks) is fine. Doesn't like shawarma; at Arabic places she gets shish tawouk."
   },
   {
     "name": "Animesh",
     "favorite_cuisines": [],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's"
     ],
-    "favorite_dishes": [],
+    "favorite_dishes": [
+      "5 dollar ramen"
+    ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
     "soft_avoid": [],
@@ -113,9 +187,17 @@
     "name": "Mihir",
     "favorite_cuisines": [],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's"
     ],
-    "favorite_dishes": [],
+    "favorite_dishes": [
+      "5 dollar ramen"
+    ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
     "soft_avoid": [],
@@ -129,9 +211,17 @@
     "name": "Aahil",
     "favorite_cuisines": [],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's"
     ],
-    "favorite_dishes": [],
+    "favorite_dishes": [
+      "5 dollar ramen"
+    ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
     "soft_avoid": [
@@ -158,12 +248,19 @@
       "Starbucks",
       "McDonald's",
       "A&W",
-      "Wendy's"
+      "Wendy's",
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's"
     ],
     "favorite_dishes": [
       "shawarma",
       "pasta",
-      "beef"
+      "beef",
+      "5 dollar ramen"
     ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
@@ -177,8 +274,20 @@
   {
     "name": "Atreyi",
     "favorite_cuisines": [],
-    "favorite_places": [],
-    "favorite_dishes": [],
+    "favorite_places": [
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's",
+      "Panini's",
+      "Tokyo Noodle Shop"
+    ],
+    "favorite_dishes": [
+      "5 dollar ramen",
+      "pasta"
+    ],
     "can_eat_proteins": [
       "boneless chicken",
       "chicken wings",
@@ -200,9 +309,17 @@
     "name": "Reon",
     "favorite_cuisines": [],
     "favorite_places": [
-      "Jerusalem Shawarma"
+      "Jerusalem Shawarma",
+      "Tim Hortons",
+      "Earls Kitchen + Bar",
+      "Tansen Izakaya",
+      "Hanjan",
+      "JMT",
+      "Osmow's"
     ],
-    "favorite_dishes": [],
+    "favorite_dishes": [
+      "5 dollar ramen"
+    ],
     "can_eat_proteins": null,
     "avoid_cuisines": [],
     "soft_avoid": [],
