@@ -99,7 +99,9 @@ function howText(r) {
 const placeLabel = (r) => r.location || (known(r) ? "Near campus" : "Location TBC");
 function cuisineLabel(r) {
   if (r.cuisines.some((x) => ["cafe", "coffee", "coffee shop"].includes(x))) return "Café";
-  const c = CUISINES.find((x) => x.id !== "coffee" && x.id !== "dessert" && matchesCuisine(r, x));
+  // The place's own cuisine tag wins ("sandwiches"); only then guess from dish words ("teriyaki" alone isn't Japanese).
+  const pool = CUISINES.filter((x) => x.id !== "coffee" && x.id !== "dessert");
+  const c = pool.find((x) => r.cuisines.some((t) => x.tags.includes(t))) ?? pool.find((x) => matchesCuisine(r, x));
   if (c) return c.label;
   if (r.good_for.includes("coffee")) return "Café";
   if (r.good_for.includes("dessert")) return "Dessert";

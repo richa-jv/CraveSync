@@ -328,3 +328,35 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
 @media (max-width: 520px) { .row .art { width: 52px; height: 52px; font-size: 26px; } }
 /* OpenStreetMap tiles, toned down to sit with the warm palette */
 .smap img, .soft-tiles { filter: saturate(.55) contrast(.95) brightness(1.04) sepia(.08); }
+
+.tiers { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+
+/* ---- Compact, more colourful results ---------------------------------------------------- */
+.results { max-width: 760px; }
+/* Top pick: warm tinted card, small tile, score as a pill. */
+.top-pick {
+  background: linear-gradient(135deg, #fff3ea 0%, #fdeef3 100%); border-color: #f6d3c4;
+  padding: 18px; gap: 16px;
+}
+.top-pick:hover { border-color: var(--brand); }
+.top-pick .art.big { width: 72px; height: 72px; border-radius: 16px; font-size: 34px; box-shadow: 0 2px 8px rgba(228, 87, 46, .12); }
+.top-pick h3 { font-size: 22px; padding-right: 100px; }
+.top-pick .score { top: 0; right: 0; display: flex; align-items: baseline; gap: 4px; background: var(--brand); color: #fff; padding: 6px 10px; border-radius: 999px; }
+.top-pick .score b { color: #fff; font-size: 17px; }
+.top-pick .score span { display: inline; color: #fff; opacity: .85; margin: 0; font-size: 11px; }
+.top-pick .why li::before { background: var(--brand); }
+/* Rows: smaller tiles, coloured rank and match pills. */
+.row { grid-template-columns: 22px 48px minmax(0, 1fr) auto; gap: 12px; padding: 9px 12px 9px 8px; }
+.row:hover { border-color: #f6d3c4; background: #fffaf6; }
+.row .art { width: 48px; height: 48px; border-radius: 12px; font-size: 24px; }
+.row h3 { font-size: 15px; }
+.row .rank { color: var(--brand-dark); font-weight: 700; }
+.row .pct { background: var(--brand-soft); color: var(--brand-dark); padding: 4px 9px; border-radius: 999px; font-size: 13px; }
+.row:nth-child(-n+3) .pct { background: #e3f1e5; color: #2f7d4f; }
+@media (max-width: 520px) {
+  .top-pick .art.big { width: 56px; height: 56px; font-size: 28px; }
+  .top-pick .eyebrow { display: block; padding-right: 96px; }
+  .top-pick h3 { padding-right: 0; }
+  .row { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .row .art { width: 44px; height: 44px; font-size: 22px; }
+}
