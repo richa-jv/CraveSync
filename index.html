@@ -48,28 +48,28 @@
 
           <section class="group">
             <div class="group-head">
-              <h2>Who's eating</h2>
+              <h2>Who's hungry?</h2>
               <span class="links"><button class="link" id="pick-all">Everyone</button><button class="link muted" id="pick-none">Just me</button></span>
             </div>
             <div id="people" class="avatars"></div>
           </section>
 
           <section class="group">
-            <h2>Plan</h2>
-            <div id="plans" class="chips" role="group" aria-label="Plan"></div>
+            <h2>What are we feeling?</h2>
+            <div id="plans" class="chips" role="group" aria-label="What are we feeling?"></div>
           </section>
 
           <section class="group">
             <div class="group-head">
-              <h2>Cuisine</h2>
+              <h2>Craving anything?</h2>
               <button class="link" id="clear-cuisines" hidden>Clear</button>
             </div>
-            <div id="cuisines" class="chips" role="group" aria-label="Cuisine"></div>
+            <div id="cuisines" class="chips" role="group" aria-label="Craving anything?"></div>
           </section>
 
           <section class="group">
             <div class="group-head">
-              <h2>Budget per person</h2>
+              <h2>Budget (be honest)</h2>
               <span id="budget-label" class="value">Any price</span>
             </div>
             <div class="range">
@@ -83,18 +83,18 @@
           <section class="group">
             <h2>Extras</h2>
             <div class="toggles">
-              <button id="nearby" class="toggle" aria-pressed="false"><span class="box"></span>Within 15 min</button>
-              <button id="hangout" class="toggle" aria-pressed="false"><span class="box"></span>Hangout spots</button>
+              <button id="nearby" class="toggle" aria-pressed="false"><span class="box"></span>Close enough to walk (15 min)</button>
+              <button id="hangout" class="toggle" aria-pressed="false"><span class="box"></span>Hangout spots (photo booth, board games…)</button>
             </div>
           </section>
 
-          <button id="surprise" class="btn secondary full">Surprise me</button>
+          <button id="surprise" class="btn secondary full">🎲 Can't decide? Just pick for us</button>
         </aside>
 
         <div class="results" aria-live="polite">
           <div class="results-head">
             <div>
-              <h2 id="results-title">Finding spots…</h2>
+              <h2 id="results-title">Asking the group chat…</h2>
               <p id="results-sub" class="sub"></p>
             </div>
             <button class="btn ghost small" data-go="mapview">Map view</button>
@@ -116,7 +116,7 @@
     <!-- MAP -->
     <section id="mapview" class="view" aria-label="Map">
       <div class="page-head">
-        <h1>On the map</h1>
+        <h1>Where everything is</h1>
         <p class="sub" id="map-sub"></p>
       </div>
       <div class="map-wrap">
@@ -131,8 +131,8 @@
     <!-- RATE -->
     <section id="rate" class="view" aria-label="Rate a visit">
       <div class="page-head">
-        <h1>Rate a visit</h1>
-        <p class="sub">Been somewhere? Ratings make the picks better for everyone.</p>
+        <h1>How was it?</h1>
+        <p class="sub">Be brutally honest. Your ratings make everyone's picks better.</p>
       </div>
       <div class="card pad narrow">
         <div class="form-grid">
@@ -159,14 +159,14 @@
     <section id="crew" class="view" aria-label="Our crew">
       <div class="page-head">
         <h1>The crew</h1>
-        <p class="sub">Everyone's tastes, dealbreakers and limits. Every pick respects these.</p>
+        <p class="sub">Everyone's tastes, dealbreakers and limits. Every pick respects these. We're not monsters.</p>
       </div>
       <div id="crew-grid" class="crew-grid"></div>
     </section>
 
     <footer class="foot">
       FFO Match is an independent prototype inspired by X-Innovations' FFO | For Foodies Only.
-      Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map tiles © <a href="https://carto.com/attributions">CARTO</a>.
+      Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, map tiles from OpenStreetMap.
       Prices and travel times are estimates.
     </footer>
   </main>

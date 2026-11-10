@@ -85,6 +85,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
   border: 1px solid var(--line-2); background: var(--surface); padding: 6px 11px; border-radius: 8px; cursor: pointer;
   font-weight: 500; font-size: 13.5px; color: var(--ink-2); white-space: nowrap; transition: background .12s, border-color .12s;
 }
+.chip .e { margin-right: 6px; }
 .chip small { color: var(--muted); font-size: 12px; margin-left: 3px; font-variant-numeric: tabular-nums; }
 .chip:hover { border-color: var(--muted); }
 .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
@@ -317,3 +318,14 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
   .row .smap, .row .mono { width: 52px; height: 52px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* food tiles (cards) */
+.art { display: grid; place-items: center; line-height: 1; user-select: none; }
+.art.tone-0 { background: #fde8df; } .art.tone-1 { background: #fff1cc; } .art.tone-2 { background: #e3f1e5; }
+.art.tone-3 { background: #e6eefb; } .art.tone-4 { background: #f3e6f7; } .art.tone-5 { background: #fbe3ea; }
+.row .art { width: 64px; height: 64px; border-radius: 12px; font-size: 32px; }
+.top-pick .art.big { min-height: 180px; font-size: 92px; }
+@media (min-width: 960px) { .top-pick .art.big { min-height: 240px; height: 100%; font-size: 110px; } }
+@media (max-width: 520px) { .row .art { width: 52px; height: 52px; font-size: 26px; } }
+/* OpenStreetMap tiles, toned down to sit with the warm palette */
+.smap img, .soft-tiles { filter: saturate(.55) contrast(.95) brightness(1.04) sepia(.08); }

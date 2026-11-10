@@ -7,6 +7,20 @@ const PLAN_LABELS = {
   any: "Anything", coffee: "Coffee & matcha", "quick snack": "Quick snack", lunch: "Lunch", dinner: "Dinner",
   "late-night": "Late-night", "drive-thru": "Drive-thru", dessert: "Dessert", "on campus": "On campus",
 };
+const PLAN_EMOJI = {
+  any: "✨", coffee: "☕", "quick snack": "🥨", lunch: "🥪", dinner: "🍝", "late-night": "🌙", "drive-thru": "🚗", dessert: "🍨", "on campus": "🎓",
+};
+// Food tile for each card, matched to the place's name, dishes or cuisine (no photos of real restaurants).
+const ART = [
+  [["sushi", "japanese", "poke", "hawaiian", "izakaya"], "🍣"], [["ramen", "noodle", "pho", "vietnamese", "udon"], "🍜"],
+  [["korean"], "🥘"], [["dumpling", "momo"], "🥟"], [["chinese", "chow mein", "fried rice", "wok"], "🥡"], [["thai", "curry", "indian", "biryani", "dosa"], "🍛"],
+  [["shawarma", "middle eastern", "arabic", "lebanese", "kebab", "donair", "mediterranean", "greek", "turkish", "falafel"], "🥙"],
+  [["mexican", "taco", "burrito"], "🌮"], [["pizza"], "🍕"], [["italian", "pasta"], "🍝"],
+  [["burger", "fast food", "american"], "🍔"], [["bbq", "barbecue", "steak"], "🥩"], [["subway", "sandwich", "sub", "wrap", "panini"], "🥪"],
+  [["smoothie", "juice"], "🥤"], [["bubble tea", "boba", "matcha", "tea"], "🧋"], [["ice cream", "gelato", "dessert", "donut", "doughnut"], "🍩"],
+  [["bakery", "croissant", "pastr"], "🥐"], [["brunch", "breakfast", "pancake"], "🥞"], [["coffee", "cafe", "espresso"], "☕"],
+  [["vegan", "bowls", "salad"], "🥗"], [["chicken", "wings"], "🍗"], [["seafood", "fish"], "🦐"],
+];
 const FACE_COLORS = ["#c8431d", "#7c5cbf", "#2f7d4f", "#b4517a", "#2d6aa8", "#a8741a", "#5b6b2f", "#8a4b3b", "#3d7f86", "#6b5b95"];
 
 const store = {
@@ -86,9 +100,9 @@ function directionsUrl(r) {
   return `https://www.google.com/maps/dir/?api=1&origin=University+of+Alberta&destination=${dest}&travelmode=${mode}`;
 }
 
-// A small static map centred on the place (CARTO Voyager tiles, from OpenStreetMap data).
+// A static map centred on the place (OpenStreetMap tiles), used in the detail panel.
 // Places without coordinates get a monogram instead.
-const tileUrl = (z, x, y) => `https://${"abcd"[(x + y) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`;
+const tileUrl = (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 const monogram = (name) => name.replace(/[^A-Za-z0-9 ]/g, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "•";
 function smap(r, w, h, z = 15) {
   if (r.lat == null || r.lon == null) return `<div class="mono" aria-hidden="true">${esc(monogram(r.name))}</div>`;
@@ -101,6 +115,15 @@ function smap(r, w, h, z = 15) {
     for (let ty = Math.floor((py - h / 2) / 256); ty <= Math.floor((py + h / 2) / 256); ty++)
       imgs += `<img src="${tileUrl(z, tx, ty)}" style="left:${Math.round(tx * 256 - px)}px;top:${Math.round(ty * 256 - py)}px" alt="" loading="lazy" decoding="async">`;
   return `<div class="smap" aria-hidden="true"><div class="tiles">${imgs}</div><span class="dot"></span></div>`;
+}
+function art(r, cls = "") {
+  // The place's name and first-listed dishes say more than its cuisine tag ("Matcha Cafe" tagged japanese is still a cafe).
+  const pick = (words) => { for (const w of words) for (const [keys, e] of ART) if (keys.some((k) => w.includes(k))) return e; return null; };
+  // Order: signature (first-listed) dish, then the name, then other dishes, then cuisine tags.
+  const emoji = pick([r.dishes[0] ?? "", r.name.toLowerCase(), ...r.dishes.slice(1)]) ?? pick(r.cuisines) ?? "🍽️";
+  let h = 7;
+  for (const c of r.name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return `<div class="art tone-${h % 6} ${cls}" aria-hidden="true">${emoji}</div>`;
 }
 // If a map tile can't load (offline, blocked), just leave the plain background.
 document.addEventListener("error", (e) => { if (e.target.closest?.(".smap")) e.target.style.visibility = "hidden"; }, true);
@@ -126,7 +149,10 @@ function renderPeople() {
     </button>`).join("");
   const n = state.who.size;
   const first = [...state.who][0];
-  $("#hello").textContent = n === 0 ? "Tap a few faces to start." : n === 1 ? `Just you, ${first}. Treat yourself.` : `${first} + ${n - 1} friend${n > 2 ? "s" : ""}. Let's settle this.`;
+  $("#hello").textContent = n === 0 ? "Tap some faces. Nobody eats alone here."
+    : n === 1 ? `Just you, ${first}. Treat yourself, you've earned it.`
+    : n >= peopleList.length ? `The whole crew. Let's settle this before someone says "I don't mind".`
+    : `${first} + ${n - 1} friend${n > 2 ? "s" : ""}. Let's settle this before someone says "I don't mind".`;
 }
 $("#people").addEventListener("click", (e) => {
   const name = e.target.closest(".avatar")?.dataset.name;
@@ -139,7 +165,7 @@ $("#pick-none").addEventListener("click", () => { state.who = new Set(["Riri"].f
 
 function renderPlans() {
   $("#plans").innerHTML = ["any", ...OCCASIONS]
-    .map((o) => `<button class="chip" data-plan="${o}" aria-pressed="${state.plan === o}">${PLAN_LABELS[o] ?? title(o)}</button>`).join("");
+    .map((o) => `<button class="chip" data-plan="${o}" aria-pressed="${state.plan === o}"><span class="e">${PLAN_EMOJI[o] ?? ""}</span>${PLAN_LABELS[o] ?? title(o)}</button>`).join("");
 }
 $("#plans").addEventListener("click", (e) => {
   const plan = e.target.closest("[data-plan]")?.dataset.plan;
@@ -153,7 +179,7 @@ function renderCuisines() {
   const chips = (list) => list
     .map((c) => ({ c, n: inPlan.filter((r) => matchesCuisine(r, c)).length }))
     .filter(({ c, n }) => n > 0 || state.cuisines.has(c.id))
-    .map(({ c, n }) => `<button class="chip" data-cuisine="${esc(c.id)}" aria-pressed="${state.cuisines.has(c.id)}">${esc(c.label)}<small>${n}</small></button>`)
+    .map(({ c, n }) => `<button class="chip" data-cuisine="${esc(c.id)}" aria-pressed="${state.cuisines.has(c.id)}"><span class="e">${c.emoji}</span>${esc(c.label)}<small>${n}</small></button>`)
     .join("");
   const extras = ALL_CUISINES.slice(CUISINES.length);
   $("#cuisines").innerHTML = chips(CUISINES) + chips(extras.filter((c) => state.showAllCuisines || state.cuisines.has(c.id))) +
@@ -288,13 +314,13 @@ function facts(r, { place = true } = {}) {
 
 function topPick(rec, groupSize) {
   const r = rec.restaurant;
-  const label = state.surprise ? "Surprise pick" : groupSize > 1 ? "Best for the group" : "Top pick for you";
+  const label = state.surprise ? "🎲 Fate has chosen" : groupSize > 1 ? "The group's pick" : "Your top pick";
   const tl = tagline(rec);
   const why = reasonsFor(rec).filter((x) => x !== tl).slice(0, 4);
   const warns = warningsFor(rec, 2);
   return `
   <button class="top-pick" data-open="0">
-    ${smap(r, 640, 320, 15)}
+    ${art(r, "big")}
     <div class="tp-body">
       <span class="eyebrow">${label}</span>
       <h3>${esc(r.name)}</h3>
@@ -314,7 +340,7 @@ function row(rec, i) {
   return `
   <button class="row" data-open="${i}">
     <span class="rank">${i + 1}</span>
-    ${smap(r, 96, 96, 15)}
+    ${art(r)}
     <div>
       <h3>${esc(r.name)}</h3>
       ${facts(r)}
@@ -333,21 +359,21 @@ function renderResults() {
   renderFilterNote();
 
   const plan = state.plan === "any" ? "" : ` for ${PLAN_LABELS[state.plan].toLowerCase()}`;
-  $("#results-title").textContent = group.length ? `${recs.length} ${recs.length === 1 ? "spot" : "spots"}${plan}` : "Who's eating?";
+  $("#results-title").textContent = !group.length ? "Who's hungry?" : recs.length ? `${recs.length} ${recs.length === 1 ? "spot" : "spots"}${plan}. No excuses.` : "Hmm.";
   $("#results-sub").textContent = group.length && recs.length ? `Ranked for ${group.length === 1 ? group[0].name : `${group.length} people`}, best match first` : "";
 
   if (!group.length) {
-    $("#featured").innerHTML = `<div class="empty"><strong>Who's coming?</strong>Pick at least one person to see where to eat.</div>`;
+    $("#featured").innerHTML = `<div class="empty"><strong>It's quiet in here</strong>Tap at least one hungry person on the left.</div>`;
     $("#results").innerHTML = "";
   } else if (!recs.length && !current.available) {
     const filtered = state.priceMin > 1 || state.priceMax < 500 || state.nearby || state.hangout || state.cuisines.size;
     $("#featured").innerHTML = filtered
-      ? `<div class="empty"><strong>Nothing matches those filters</strong>Try a wider budget, another cuisine or turning off an extra.</div>`
+      ? `<div class="empty"><strong>Nothing matches those filters</strong>Your standards are impressive. Try a wider budget, another craving, or turning off an extra.</div>`
       : `<div class="empty"><strong>No ${esc(PLAN_LABELS[state.plan].toLowerCase())} spots yet</strong>Run <code>python scripts/fetch_places.py</code> to pull in real places from the map.</div>`;
     $("#results").innerHTML = "";
   } else if (!recs.length) {
     const why = [...new Set(excluded.map((e) => e.reason))].slice(0, 2).join("; ");
-    $("#featured").innerHTML = `<div class="empty"><strong>Nothing works for everyone</strong>${esc(why)}.<br>Try a different plan, or fewer people.</div>`;
+    $("#featured").innerHTML = `<div class="empty"><strong>Someone's being picky</strong>${esc(why)}.<br>Try a different vibe, or leave someone at home.</div>`;
     $("#results").innerHTML = "";
   } else {
     $("#featured").innerHTML = topPick(recs[0], group.length);
@@ -444,9 +470,9 @@ let map = null;
 let layer = null;
 if (window.L) {
   map = L.map("map", { scrollWheelZoom: false, zoomControl: true }).setView(CAMPUS, 13);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19, subdomains: "abcd",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, className: "soft-tiles",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
   L.circleMarker(CAMPUS, { radius: 6, color: "#fff", weight: 3, fillColor: "#1f1a17", fillOpacity: 1 }).addTo(map).bindTooltip("U of A Quad");
   layer = L.layerGroup().addTo(map);
@@ -456,7 +482,7 @@ if (window.L) {
 
 function renderMap() {
   const recs = current.recs.slice(0, state.shown);
-  $("#map-sub").textContent = recs.length ? `Your top ${recs.length} picks, numbered in the same order as Discover.` : "Pick who's eating on Discover first.";
+  $("#map-sub").textContent = recs.length ? `Your top ${recs.length} picks, numbered like on Discover. Pick the closest, or the tastiest. Your call.` : "Pick who's hungry on Discover first.";
   const pinned = recs.map((rec, i) => ({ rec, i })).filter(({ rec }) => rec.restaurant.lat != null);
   const missing = recs.length - pinned.length;
   $("#map-note").textContent = missing ? `${missing} pick${missing > 1 ? "s aren't" : " isn't"} pinned yet (no location).` : "";
@@ -494,7 +520,7 @@ $("#save-rating").addEventListener("click", () => {
   const entry = { person: $("#rate-person").value, restaurant: place, rating: stars, date: new Date().toISOString().slice(0, 10) };
   ratings.push(entry);
   store.set("ffo.ratings", ratings);
-  msg.textContent = `Saved. ${entry.person} gave ${place} ${stars}/5.`;
+  msg.textContent = `Saved. ${entry.person} gave ${place} ${stars}/5. ${stars >= 5 ? "Iconic." : stars <= 2 ? "Noted. Never again." : "Fair."}`;
   $("#rate-place").value = "";
   renderRatings();
   update();
