@@ -6,8 +6,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const CAMPUS = [53.5263, -113.525];
 const PLAN_LABELS = {
-  any: "Anything", coffee: "Coffee & matcha", "quick snack": "Quick snack", lunch: "Lunch", dinner: "Dinner",
-  "late-night": "Late-night", "drive-thru": "Drive-thru", dessert: "Dessert", "on campus": "On campus",
+  any: "Anything", coffee: "Caffeine run", "quick snack": "Between classes", lunch: "Lunch break", dinner: "Dinner",
+  "late-night": "Late-night study fuel", "drive-thru": "Drive-thru", dessert: "Sweet tooth", "on campus": "Stay on campus",
+};
+// How each plan reads in the results heading ("320 spots for a snack between classes").
+const PLAN_TITLE = {
+  coffee: "a caffeine run", "quick snack": "a snack between classes", lunch: "a lunch break", dinner: "dinner",
+  "late-night": "late-night study fuel", "drive-thru": "the drive-thru", dessert: "your sweet tooth", "on campus": "right on campus",
 };
 const PLAN_EMOJI = {
   any: "✨", coffee: "☕", "quick snack": "🥨", lunch: "🥪", dinner: "🍝", "late-night": "🌙", "drive-thru": "🚗", dessert: "🍨", "on campus": "🎓",
@@ -329,7 +334,7 @@ function facts(r, { place = true } = {}) {
 
 function topPick(rec, groupSize) {
   const r = rec.restaurant;
-  const label = state.surprise ? "🎲 Fate has chosen" : groupSize > 1 ? "The group's pick" : "Your top pick";
+  const label = state.surprise ? "🎲 Fate has chosen" : groupSize > 1 ? "The group chat's pick" : "Your top pick";
   const tl = tagline(rec);
   const why = reasonsFor(rec).filter((x) => x !== tl).slice(0, 4);
   const warns = warningsFor(rec, 2);
@@ -373,7 +378,7 @@ function renderResults() {
   if (query !== lastQuery) { state.shown = FIRST_PAGE; lastQuery = query; }
   renderFilterNote();
 
-  const plan = state.plan === "any" ? "" : ` for ${PLAN_LABELS[state.plan].toLowerCase()}`;
+  const plan = state.plan === "any" ? "" : ` for ${PLAN_TITLE[state.plan] ?? state.plan}`;
   $("#results-title").textContent = !group.length ? "Who's hungry?" : recs.length ? `${recs.length} ${recs.length === 1 ? "spot" : "spots"}${plan}. No excuses.` : "Hmm.";
   $("#results-sub").textContent = group.length && recs.length ? `Ranked for ${group.length === 1 ? group[0].name : `${group.length} people`}, best match first` : "";
 

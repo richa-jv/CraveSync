@@ -144,12 +144,12 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 
 /* top pick */
 .top-pick {
-  display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; text-align: left; padding: 0; cursor: pointer; color: var(--ink);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 20px; align-items: start; width: 100%; text-align: left; padding: 22px; cursor: pointer; color: var(--ink);
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: border-color .15s;
 }
 .top-pick:hover { border-color: var(--line-2); }
 .top-pick .smap, .top-pick .mono { height: 180px; font-size: 44px; }
-.tp-body { padding: 18px 20px 20px; position: relative; }
+.tp-body { position: relative; min-width: 0; }
 .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-dark); }
 .top-pick h3 { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -.025em; line-height: 1.15; margin: 4px 0 6px; padding-right: 70px; }
 .tagline { font-size: 15px; color: var(--ink-2); margin: 10px 0 0; }
@@ -304,7 +304,6 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
   }
   .sidebar::-webkit-scrollbar { width: 6px; }
   .sidebar::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; }
-  .top-pick { grid-template-columns: 300px minmax(0, 1fr); }
   .top-pick .smap, .top-pick .mono { height: 100%; min-height: 240px; }
   .map-wrap { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
   .map-wrap > div:last-child { max-height: min(60vh, 560px); overflow-y: auto; }
@@ -324,8 +323,8 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
 .art.tone-0 { background: #fde8df; } .art.tone-1 { background: #fff1cc; } .art.tone-2 { background: #e3f1e5; }
 .art.tone-3 { background: #e6eefb; } .art.tone-4 { background: #f3e6f7; } .art.tone-5 { background: #fbe3ea; }
 .row .art { width: 64px; height: 64px; border-radius: 12px; font-size: 32px; }
-.top-pick .art.big { min-height: 180px; font-size: 92px; }
-@media (min-width: 960px) { .top-pick .art.big { min-height: 240px; height: 100%; font-size: 110px; } }
+.top-pick .art.big { width: 104px; height: 104px; border-radius: 20px; font-size: 54px; }
+@media (max-width: 520px) { .top-pick { gap: 14px; padding: 18px; } .top-pick .art.big { width: 64px; height: 64px; border-radius: 14px; font-size: 34px; } }
 @media (max-width: 520px) { .row .art { width: 52px; height: 52px; font-size: 26px; } }
 /* OpenStreetMap tiles, toned down to sit with the warm palette */
 .smap img, .soft-tiles { filter: saturate(.55) contrast(.95) brightness(1.04) sepia(.08); }
