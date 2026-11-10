@@ -29,7 +29,13 @@ test("load reads ratings and drops bad rows", async () => {
   assert.deepEqual(await s.load(), [{ person: "Riri", restaurant: "Remedy Cafe", rating: 5, date: "2026-11-01" }]);
   assert.match(f.calls[0].url, /^https:\/\/abc\.supabase\.co\/rest\/v1\/ratings\?select=/);
   assert.equal(f.calls[0].headers.apikey, "k");
-  assert.equal(f.calls[0].headers.Authorization, "Bearer k");
+  assert.equal(f.calls[0].headers.Authorization, undefined);
+});
+
+test("legacy anon keys (JWTs) are also sent as the Bearer token", async () => {
+  const f = fakeFetch();
+  await createRatingsStore({ url: "https://abc.supabase.co", key: "eyJabc", fetchImpl: f }).load();
+  assert.equal(f.calls[0].headers.Authorization, "Bearer eyJabc");
 });
 
 test("save upserts one rating per person per place", async () => {

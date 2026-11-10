@@ -1,4 +1,4 @@
-// Evaluate FFO Match against real ratings.   Run:  node scripts/evaluate.mjs
+// Evaluate CraveSync against real ratings.   Run:  node scripts/evaluate.mjs
 //
 // data/ratings.csv rows: person,restaurant,rating(1-5)[,date]. Rating >= 4 = "good pick".
 // precision@k per person = of the top-k recommended places the person has actually rated,
@@ -36,10 +36,10 @@ for (const name of [...new Set(ratings.map((r) => r.person))]) {
   rows.push({
     person: name,
     ratings: mine.length,
-    [`ffo_p@${K}`]: precisionAtK(recs.map((r) => r.restaurant.name), liked, rated),
+    [`cravesync_p@${K}`]: precisionAtK(recs.map((r) => r.restaurant.name), liked, rated),
     [`baseline_p@${K}`]: precisionAtK(baseline, liked, rated),
   });
 }
 console.table(rows);
 const mean = (k) => { const v = rows.map((r) => r[k]).filter((x) => x != null); return v.reduce((a, b) => a + b, 0) / (v.length || 1); };
-console.log(`Mean precision@${K}: FFO Match ${mean(`ffo_p@${K}`).toFixed(2)} vs baseline ${mean(`baseline_p@${K}`).toFixed(2)}`);
+console.log(`Mean precision@${K}: CraveSync ${mean(`cravesync_p@${K}`).toFixed(2)} vs baseline ${mean(`baseline_p@${K}`).toFixed(2)}`);

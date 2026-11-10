@@ -219,7 +219,7 @@ def run_query(query: str, rounds: int = 3) -> list[dict]:
     for rnd in range(rounds):
         for url in ENDPOINTS:
             try:
-                req = urllib.request.Request(url, data=data, headers={"User-Agent": "ffo-match-student-project"})
+                req = urllib.request.Request(url, data=data, headers={"User-Agent": "cravesync-student-project"})
                 with urllib.request.urlopen(req, timeout=90) as resp:
                     return json.load(resp)["elements"]
             except Exception as e:  # busy server, rate limit, network blip

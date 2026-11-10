@@ -1,6 +1,6 @@
-# 🍜 FFO Match
+# 🍜 CraveSync
 
-**Where should we eat?** FFO Match recommends food spots around the University of Alberta for one person or a whole friend group, and explains every pick.
+**Where should we eat?** CraveSync recommends food spots around the University of Alberta for one person or a whole friend group, and explains every pick.
 
 It started with a real problem: me, my two roommates and our friends (9 people with very different food rules) trying to agree on where to go. It's an independent prototype inspired by X-Innovations' *FFO | For Foodies Only* concept.
 

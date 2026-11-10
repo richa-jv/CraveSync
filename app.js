@@ -32,8 +32,15 @@ const ART = [
 ];
 const FACE_COLORS = ["#c8431d", "#7c5cbf", "#2f7d4f", "#b4517a", "#2d6aa8", "#a8741a", "#5b6b2f", "#8a4b3b", "#3d7f86", "#6b5b95"];
 
+// Saved settings use "cravesync.*" keys. Older "ffo.*" ones (from when the app was called FFO Match)
+// are still read, so nobody loses their picks or unsynced ratings after the rename.
 const store = {
-  get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  get(k, fallback) {
+    try {
+      const v = localStorage.getItem(k) ?? localStorage.getItem(k.replace(/^cravesync\./, "ffo."));
+      return v ? JSON.parse(v) : fallback;
+    } catch { return fallback; }
+  },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
 };
 const $ = (s) => document.querySelector(s);
@@ -65,8 +72,8 @@ const faceColor = Object.fromEntries(peopleList.map((p, i) => [p.name, FACE_COLO
 const initials = (n) => n.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 const state = {
-  who: new Set(store.get("ffo.who", ["Riri"]).filter((n) => people[n])),
-  plan: store.get("ffo.plan", "any"),
+  who: new Set(store.get("cravesync.who", ["Riri"]).filter((n) => people[n])),
+  plan: store.get("cravesync.plan", "any"),
   cuisines: new Set(),
   showAllCuisines: false,
   nearby: false,
@@ -527,7 +534,7 @@ function renderMap() {
 
 // ---- rate -----------------------------------------------------------------------------------
 let stars = 4;
-const ratings = store.get("ffo.ratings", []);
+const ratings = store.get("cravesync.ratings", []);
 $("#rate-person").innerHTML = peopleList.map((p) => `<option>${esc(p.name)}</option>`).join("");
 $("#places").innerHTML = [...new Set(restaurants.map((r) => r.name))].sort().map((n) => `<option value="${esc(n)}"></option>`).join("");
 function renderStars() {
@@ -539,7 +546,7 @@ const keepLocal = (entry) => {
   const i = ratings.findIndex((x) => rateKey(x) === rateKey(entry));
   if (i >= 0) ratings.splice(i, 1);
   ratings.push(entry);
-  store.set("ffo.ratings", ratings);
+  store.set("cravesync.ratings", ratings);
 };
 const addShared = (rows) => {
   for (const x of rows) {
@@ -556,7 +563,7 @@ async function syncPending() {
     await cloud.save(pending);
     addShared(pending);
     ratings.length = 0;
-    store.set("ffo.ratings", ratings);
+    store.set("cravesync.ratings", ratings);
     renderRatings();
     update();
   } catch (e) { console.warn("Couldn't sync saved ratings yet:", e); }
@@ -607,7 +614,7 @@ $("#download").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(a.href);
 });
-$("#clear-ratings").addEventListener("click", () => { ratings.length = 0; store.set("ffo.ratings", ratings); renderRatings(); update(); });
+$("#clear-ratings").addEventListener("click", () => { ratings.length = 0; store.set("cravesync.ratings", ratings); renderRatings(); update(); });
 
 // ---- crew -----------------------------------------------------------------------------------
 const tags = (xs, cls = "") => xs.map((x) => `<span class="tag ${cls}">${esc(x)}</span>`).join("");
@@ -628,8 +635,8 @@ $("#crew-grid").innerHTML = peopleList.map((p) => {
 
 // ---- go -------------------------------------------------------------------------------------
 function update() {
-  store.set("ffo.who", [...state.who]);
-  store.set("ffo.plan", state.plan);
+  store.set("cravesync.who", [...state.who]);
+  store.set("cravesync.plan", state.plan);
   renderPeople();
   renderPlans();
   renderCuisines();

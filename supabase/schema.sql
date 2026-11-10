@@ -1,4 +1,4 @@
--- FFO Match: shared ratings table.
+-- CraveSync: shared ratings table.
 -- Run once in Supabase: SQL Editor → New query → paste this → Run.
 
 create table if not exists public.ratings (
