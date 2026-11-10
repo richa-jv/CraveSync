@@ -394,3 +394,10 @@ input:focus, select:focus { outline: 2px solid var(--brand-soft); border-color: 
 #surprise:hover { filter: brightness(1.05); }
 .sidebar .group .link.muted { color: var(--muted); }
 .sidebar .toggles { display: grid; gap: 4px; }
+/* Desktop: the whole crew fits in two neat rows of five. */
+@media (min-width: 960px) {
+  .sidebar .avatars { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 2px; }
+  .sidebar .avatar { width: auto; }
+  .sidebar .avatar .face { width: 38px; height: 38px; font-size: 13px; }
+  .sidebar .avatar .nm { font-size: 11.5px; max-width: 100%; }
+}
