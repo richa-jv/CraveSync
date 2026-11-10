@@ -1,0 +1,144 @@
+// Run with:  node --test tests/
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { parseCSV } from "../lib/csv.js";
+import { prepareRestaurants, recommend, samePlace } from "../lib/recommender.js";
+
+const root = new URL("..", import.meta.url);
+const R = prepareRestaurants(readFileSync(new URL("tests/fixtures/restaurants_sample.csv", root), "utf8"));
+const P = Object.fromEntries(JSON.parse(readFileSync(new URL("data/people.json", root), "utf8")).map((p) => [p.name, p]));
+const names = (recs) => recs.map((r) => r.restaurant.name);
+
+test("CSV parser handles quoted commas", () => {
+  const rows = parseCSV('a,b\n1,"x, y"\n2,"say ""hi"""\n');
+  assert.deepEqual(rows, [{ a: "1", b: "x, y" }, { a: "2", b: 'say "hi"' }]);
+});
+
+test("Star never gets places without boneless chicken, fish or seafood", () => {
+  const { recs, excluded } = recommend([P.Star], R, { occasion: "lunch", topN: 50 });
+  for (const r of recs) assert.ok(r.restaurant.proteins.some((p) => ["boneless chicken", "fish", "seafood"].includes(p)));
+  assert.ok(excluded.some((e) => e.reason.includes("Star")));
+});
+
+test("Star can still get matcha on a coffee run", () => {
+  const { recs } = recommend([P.Star], R, { occasion: "coffee", craving: "matcha", topN: 3 });
+  assert.ok(recs.some((r) => r.restaurant.tags.includes("matcha")));
+});
+
+test("Harshi's coffee pick is Tim Hortons", () => {
+  const { recs } = recommend([P.Harshi], R, { occasion: "coffee", topN: 1 });
+  assert.deepEqual(names(recs), ["Tim Hortons"]);
+});
+
+test("Aahil's top lunch picks aren't greasy", () => {
+  const { recs } = recommend([P.Aahil], R, { occasion: "lunch", topN: 3 });
+  for (const r of recs) assert.ok(!r.restaurant.tags.includes("greasy"));
+});
+
+test("Sahil gets shawarma or pasta first", () => {
+  const { recs } = recommend([P.Sahil], R, { occasion: "dinner", topN: 2 });
+  const dishes = recs.flatMap((r) => r.restaurant.dishes);
+  assert.ok(dishes.includes("shawarma") || dishes.includes("pasta"));
+});
+
+test("late-night only returns late-night places", () => {
+  const { recs } = recommend([P.Richa], R, { occasion: "late-night", topN: 20 });
+  assert.ok(recs.length);
+  for (const r of recs) assert.ok(r.restaurant.good_for.includes("late-night"));
+});
+
+test("a place is ruled out for the group if anyone can't eat there", () => {
+  const solo = recommend([P.Harshi], R, { occasion: "lunch", topN: 50 });
+  const group = recommend([P.Harshi, P.Star], R, { occasion: "lunch", topN: 50 });
+  assert.ok(names(solo.recs).includes("Savoy (HUB)"));
+  assert.ok(!names(group.recs).includes("Savoy (HUB)"));
+});
+
+test("unknown menu is kept but flagged", () => {
+  const df = R.map((r) => (r.name === "SAMPLE Matcha Cafe" ? { ...r, proteins: [], good_for: [...r.good_for, "dinner"] } : r));
+  const { recs } = recommend([P.Star], df, { occasion: "dinner", topN: 50 });
+  const rec = recs.find((r) => r.restaurant.name === "SAMPLE Matcha Cafe");
+  assert.ok(rec.perPerson.some((p) => p.warnings.some((w) => w.includes("check the menu"))));
+});
+
+test("craving text matches word variants (spicy ~ spice)", () => {
+  const { recs } = recommend([P.Animesh], R, { occasion: "dinner", craving: "spicy", topN: 3 });
+  assert.ok(names(recs).includes("SAMPLE Thai Kitchen"));
+});
+
+test("group scores are sorted and between 0 and 1", () => {
+  const { recs } = recommend(Object.values(P), R, { topN: 10 });
+  const s = recs.map((r) => r.score);
+  assert.deepEqual(s, [...s].sort((a, b) => b - a));
+  for (const x of s) assert.ok(x >= 0 && x <= 1);
+});
+
+test("Harshi and Star don't get pushed towards shawarma", () => {
+  const plain = { ...P.Harshi, soft_avoid: [] };
+  const rank = (person) => names(recommend([person], R, { occasion: "dinner", topN: 50 }).recs).indexOf("SAMPLE Shawarma Spot");
+  assert.ok(rank(P.Harshi) > rank(plain));
+  const { recs } = recommend([P.Star], R, { occasion: "dinner", topN: 50 });
+  const spot = recs.find((r) => r.restaurant.name === "SAMPLE Shawarma Spot");
+  assert.ok(spot.perPerson[0].warnings.some((w) => w.includes("shawarma")));
+});
+
+test("place names match loosely but safely", () => {
+  assert.ok(samePlace("Jerusalem Shawarma", "Jerusalem Shawarma Whyte Ave"));
+  assert.ok(samePlace("Bar Burrito (SUB)", "Bar Burrito"));
+  assert.ok(samePlace("McDonald's", "McDonalds"));
+  assert.ok(samePlace("A&W", "A&W"));
+  assert.ok(!samePlace("A&W", "Awesome Wings"));
+  assert.ok(!samePlace("Subway", "Sushi Way"));
+});
+
+test("Jerusalem Shawarma is a go-to that beats Harshi and Star's shawarma dislike", () => {
+  const js = { ...R.find((r) => r.name === "SAMPLE Shawarma Spot"), name: "Jerusalem Shawarma", location: "Whyte Ave" };
+  const data = [...R, js];
+  for (const who of ["Harshi", "Star"]) {
+    const { recs } = recommend([P[who]], data, { occasion: "dinner", topN: 50 });
+    const rec = recs.find((r) => r.restaurant.name === "Jerusalem Shawarma");
+    assert.ok(rec.reasons.some((x) => x.includes("go-to")));
+    assert.ok(!rec.perPerson[0].warnings.some((w) => w.includes("shawarma")));
+    assert.ok(names(recs).indexOf("Jerusalem Shawarma") < names(recs).indexOf("SAMPLE Shawarma Spot"));
+  }
+  const group = recommend(Object.values(P), data, { occasion: "dinner", topN: 1 });
+  assert.deepEqual(names(group.recs), ["Jerusalem Shawarma"]);
+});
+
+test("drive-thru plan only shows drive-thrus, doesn't punish driving distance, one per chain", () => {
+  const base = R.find((r) => r.name === "McDonald's");
+  const dt = (name, km, area) => ({ ...base, name, location: area, distance_km: km, good_for: ["drive-thru"], tags: [...base.tags, "drive-thru"] });
+  const data = [...R, dt("McDonald's (drive-thru, Southgate)", 4.8, "Southgate"), dt("McDonald's (drive-thru, Clareview)", 11.5, "Clareview"),
+    { ...dt("A&W (drive-thru, Kingsway)", 4.6, "Kingsway"), cuisines: ["burgers"], dishes: ["burger"] }];
+  const { recs } = recommend([P.Sahil], data, { occasion: "drive-thru", topN: 10 });
+  assert.ok(recs.every((r) => r.restaurant.good_for.includes("drive-thru")));
+  assert.deepEqual(names(recs).sort(), ["A&W (drive-thru, Kingsway)", "McDonald's (drive-thru, Southgate)"]);
+  for (const r of recs) assert.ok(!r.perPerson[0].warnings.some((w) => w.includes("farther")));
+});
+
+test("picks are scored by travel time, with each person's own limit", () => {
+  const base = R.find((r) => r.name === "SAMPLE Ramen House");
+  const far = { ...base, name: "Clareview Ramen", travel_min: 38, how: "LRT to Clareview + 6 min walk" };
+  const close = { ...base, name: "Campus Ramen", travel_min: 8, how: "8 min walk from campus" };
+  const data = [far, close];
+  const strict = recommend([{ ...P.Star, max_travel_min: 30 }], data, { occasion: "dinner" });
+  assert.deepEqual(names(strict.recs), ["Campus Ramen", "Clareview Ramen"]);
+  assert.ok(strict.recs[1].perPerson[0].warnings.some((w) => w.includes("38 min")));
+  const relaxed = recommend([{ ...P.Star, max_travel_min: 45 }], data, { occasion: "dinner" });
+  assert.ok(!relaxed.recs.find((r) => r.restaurant.name === "Clareview Ramen").perPerson[0].warnings.length);
+});
+
+test("stays fast with thousands of places", () => {
+  const big = [];
+  for (let i = 0; i < 4000; i++) {
+    const r = R[i % R.length];
+    big.push({ ...r, name: `${r.name} #${i}`, travel_min: 5 + (i % 40) });
+  }
+  const everyone = Object.values(P);
+  recommend(everyone, big, { occasion: "dinner", craving: "warm" }); // builds the index once
+  const t = performance.now();
+  for (const c of ["spicy", "noodles", "something cheap"]) recommend(everyone, big, { occasion: "dinner", craving: c });
+  const each = (performance.now() - t) / 3;
+  assert.ok(each < 400, `took ${each.toFixed(0)} ms per search`);
+});
